@@ -1,3 +1,5 @@
+https://github.com/uosagas/assistant
+
 Pause(3000) -- Pauses the script for 3 seconds
 Gumps.GetByText(text)
 Gumps.WaitForGump(gumpSerial, milliseconds)
