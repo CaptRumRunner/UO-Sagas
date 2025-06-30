@@ -27,7 +27,7 @@ Messages.Print("___________________________________", Colors.INFO)
 
 -- User Settings
 local Config = {
-    WeightBuffer           = 25     -- in stones
+    WeightBuffer           = 25     -- in stones (Edit as needed)
     LastFullHealthMessage  = 0
     LastBandageMessage     = 0
     LastBandagingMessage   = 0
@@ -42,8 +42,8 @@ local Config = {
     HostileMessageCooldown = 4      -- in seconds
 }	
 
--- Items to Scavenge
-ScavengeFor = {
+-- Items to Scavenge (Add "--" in front of anything you want to turn off)
+itemsToSearchFor = {
         0x0f7a, -- Black Pearl
         0x0f7b, -- Blood Moss
         0x0f86, -- Mandrake Root
@@ -65,9 +65,9 @@ local AnimalNames = {
     "a grizzly bear", "a brown bear", "a pack horse", "a kingfisher", "a lapwing", "a timber wolf",
 }
 
--- Check Weight
+-- Check Character Weight
 local function GetWeightLimit()
-    return Player.MaxWeight - WeightBuffer
+    return Player.MaxWeight - Config.WeightBuffer
 end
 
 local function IsOverweight()
@@ -92,46 +92,46 @@ local function AutoBandageSelf()
             if Targeting.WaitForTarget(1000) then
                 Targeting.TargetSelf()
                 local now = os.clock()
-                if now - LastBandagingMessage >= BandagingCooldown then
-                    Messages.Overhead("Bandaging", ACTION, Player.Serial)
-                    LastBandagingMessage = now
+                if now - Config.LastBandagingMessage >= Config.BandagingCooldown then
+                    Messages.Overhead("Bandaging", Colors.Action, Player.Serial)
+                    Config.LastBandagingMessage = now
                     local elapsed = 0
                     local result = nil
-                    while elapsed < BandageTimeout do
+                    while elapsed < Config.BandageTimeout do
                         if Journal.Contains("You finish applying the bandages") then
                             result = "full"
-                            Messages.Overhead("Bandage complete!", CONFIRM, Player.Serial)
+                            Messages.Overhead("Bandage complete!", Colors.Confirm, Player.Serial)
                             break
                         elseif Journal.Contains("You apply the bandages, but they barely help.") then
                             result = "partial"
-                            Messages.Overhead("Bandage barely helped", WARNING, Player.Serial)
+                            Messages.Overhead("Bandage barely helped", Colors.Warning, Player.Serial)
                             break
                         elseif Journal.Contains("You have failed to cure your target.") then
                             result = "partial"
-                            Messages.Overhead("Bandage Failed", ALERT, Player.Serial)
+                            Messages.Overhead("Bandage Failed", Colors.Alert, Player.Serial)
                             break
                         end
                         Pause(BandageInterval)
-                        elapsed = elapsed + BandageInterval
+                        elapsed = elapsed + Config.BandageInterval
                     end
 
                     if not result then
-                        Messages.Overhead("Bandage timed out", ALERT, Player.Serial)
+                        Messages.Overhead("Bandage timed out", Colors.Alert, Player.Serial)
                     end
                 end
             end
         else
             local now = os.clock()
-            if now - LastBandageMessage >= NoBandageCooldown then
-                Messages.Overhead("No bandages found!", ALERT, Player.Serial)
-                LastBandageMessage = now
+            if now - Config.LastBandageMessage >= Config.NoBandageCooldown then
+                Messages.Overhead("No bandages found!", Colors.Alert, Player.Serial)
+                Config.LastBandageMessage = now
             end
         end
     else
         local now = os.clock()
-        if now - LastFullHealthMessage >= FullHealthCooldown then
-            Messages.Overhead("Full Health", INFO)
-            LastFullHealthMessage = now
+        if now - Config.LastFullHealthMessage >= Config.FullHealthCooldown then
+            Messages.Overhead("Full Health", Colors.Info)
+            Config.LastFullHealthMessage = now
         end
     end
 end
@@ -139,18 +139,18 @@ end
 -- Cure Poison
 local function AutoCure()
     local now = os.clock()
-    if now - LastCureTime < CureCooldown then return end
+    if now - Config.LastCureTime < Config.CureCooldown then return end
 
     if Journal.Contains("You feel a bit nauseous") then
         local CurePotion = Items.FindByType(3847, Player.Backpack)
         if CurePotion then
             Player.UseObject(CurePotion.Serial)
-            Messages.Overhead("Curing Poison", ACTION, Player.Serial)
-            LastCureTime = now
+            Messages.Overhead("Curing Poison", Colors.Action, Player.Serial)
+            Config.LastCureTime = now
             Journal.Clear()
         else
-            Messages.Overhead("No Cure Potion Found!", ALERT, Player.Serial)
-            LastCureTime = now
+            Messages.Overhead("No Cure Potion Found!", Colors.Alert, Player.Serial)
+            Config.LastCureTime = now
         end
     end
 end
@@ -178,9 +178,9 @@ local function CheckHostileMobs()
         for _, mob in ipairs(mobs) do
             if mob and mob.Name and not IdentifyAnimal(mob) then
                 local now = os.clock()
-                if now - LastHostileMessageTime >= HostileMessageCooldown then
-                    Messages.Overhead("Hostile!", ALERT, mob.Serial)
-                    LastHostileMessageTime = now
+                if now - Config.LastHostileMessageTime >= Config.HostileMessageCooldown then
+                    Messages.Overhead("Hostile!", Colors.Alert, mob.Serial)
+                    Config.LastHostileMessageTime = now
                 end
             end
         end
