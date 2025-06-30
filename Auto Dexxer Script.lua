@@ -21,9 +21,9 @@ local Colors = {
 }
 
 -- Print Initial Start Up Greeting
-Messages.Print("___________________________________", Colors.INFO)
-Messages.Print("Auto Dexxer Assistant Script v0.1.3", Colors.INFO)
-Messages.Print("___________________________________", Colors.INFO)
+Messages.Print("___________________________________", Colors.Info)
+Messages.Print("Auto Dexxer Assistant Script v0.1.3", Colors.Info)
+Messages.Print("___________________________________", Colors.Info)
 
 -- User Settings
 local Config = {
@@ -111,7 +111,7 @@ local function AutoBandageSelf()
                             Messages.Overhead("Bandage Failed", Colors.Alert, Player.Serial)
                             break
                         end
-                        Pause(BandageInterval)
+                        Pause(Config.BandageInterval)
                         elapsed = elapsed + Config.BandageInterval
                     end
 
@@ -209,9 +209,8 @@ while true do
     IsOverweight()
     AutoBandageSelf()
     AutoCure()
-    IdentifyAnimal(mob)
     CheckHostileMobs()
     Scavenger()
  
-    Pause(250)
+    Pause(150)
 end
