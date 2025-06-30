@@ -43,10 +43,10 @@ local Config = {
 }	
 
 -- Define Important Items to Track
-local ImportantItems = {
-    Bandage 	  = 0x0E21,       -- Bandage
-    Cure Potion   = 0x0F0E,  	  -- Cure Potion
-    Poison Potion = 0x0000	  -- Poison Potion
+local ImportantGear = {
+    Bandage 	  = 0x0E21,       -- Bandages
+    Cure Potion   = 0x0F0E,  	  -- Cure Potions
+    Poison Potion = 0x0F0A	  -- Poison Potions
 }
 
 -- Items to Scavenge (Add "--" in front of anything you want to turn off)
@@ -65,11 +65,14 @@ local ItemsToSearchFor = {
         0x0F0E, -- Empty Bottle
        }
 
-local AnimalNames = {
-    "a deer", "a horse", "a cow", "a dog", "a sheep", "a cat", "a goat", "a pig", "a magpie", "a chicken", 
-    "a tropical bird", "a squirrel", "a warbler", "a swallowL", "a woodpecker", "a finch", "a thrush",
-    "an eagle", "a rat", "a gorilla", "a raven", "a crow", "a rabbit", "a black bear", "a hind", "a great hart", 
-    "a grizzly bear", "a brown bear", "a pack horse", "a kingfisher", "a lapwing", "a timber wolf",
+local AnimalNamesToIgnore = {
+    ["a deer"] = true, ["a horse"] = true, ["a cow"] = true, ["a dog"] = true, ["a sheep"] = true,
+    ["a cat"] = true, ["a goat"] = true, ["a pig"] = true, ["a magpie"] = true, ["a chicken"] = true,
+    ["a tropical bird"] = true, ["a squirrel"] = true, ["a warbler"] = true, ["a swallowL"] = true,
+    ["a woodpecker"] = true, ["a finch"] = true, ["a thrush"] = true, ["an eagle"] = true, ["a rat"] = true,
+    ["a gorilla"] = true, ["a raven"] = true, ["a crow"] = true, ["a rabbit"] = true, ["a black bear"] = true,
+    ["a hind"] = true, ["a great hart"] = true, ["a grizzly bear"] = true, ["a brown bear"] = true,
+    ["a pack horse"] = true, ["a kingfisher"] = true, ["a lapwing"] = true, ["a timber wolf"] = true,
 }
 
 -- Check Character Weight
@@ -77,7 +80,7 @@ local function GetWeightLimit()
     return Player.MaxWeight - Config.WeightBuffer
 end
 
-local function IsOverweight()
+local function CheckWeight()
     local MaxCharWeight = GetWeightLimit()
     if Player.Weight >= MaxCharWeight + Config.WeightBuffer then
         Messages.Overhead("Overweight!!!!!", Colors.Alert, Player.Serial)
@@ -162,43 +165,31 @@ local function AutoCure()
     end
 end
 
--- Determine if it's an animal
-local function IdentifyAnimal(mob)
-    if not mob or not mob.Name then return false end
-    local name = mob.Name:lower()
-    for _, animal in ipairs(AnimalNames) do
-        if name == animal then return true end
-    end
-    return false
-end
-
 -- Scan for enemies
 local function CheckHostileMobs()
-    local mobs = Mobiles.FindByFilter({
-        range = 15,
-        notoriety = 5,
-        dead = false,
-        human = false
-    })
+    local mobs = Mobiles.FindByFilter({range = 12, notoriety = 5, dead = false, human = false})
 
     if mobs then
         for _, mob in ipairs(mobs) do
-            if mob and mob.Name and not IdentifyAnimal(mob) then
-                local now = os.clock()
-                if now - Config.LastHostileMessageTime >= Config.HostileMessageCooldown then
-                    Messages.Overhead("Hostile!", Colors.Alert, mob.Serial)
-                    Config.LastHostileMessageTime = now
+            if mob and mob.Name then
+                local name = mob.Name:lower()
+
+                -- Check if the mob is an animal using the set
+                if not AnimalNamesToIgnore[name] then
+                    local now = os.clock()
+                    if now - Config.LastHostileMessageTime >= Config.HostileMessageCooldown then
+                        Messages.Overhead("Hostile!", Colors.Alert, mob.Serial)
+                        Config.LastHostileMessageTime = now
+                    end
                 end
             end
         end
     end
 end
 
-
 -- Main Scavenger Loop
 local function Scavenger()
-	filter = {onground=true, rangemax=2, graphics=ItemsToSearchFor}
-	
+	filter = {onground=true, rangemax=2, graphics=ItemsToSearchFor}	
 	list = Items.FindByFilter(filter)
 	for index, item in ipairs(list) do
 	   -- Messages.Print('Picking up '..item.Name..' at location x:'..item.X..' y:'..item.Y)
@@ -207,17 +198,14 @@ local function Scavenger()
 	    Player.DropInBackpack()
 	    Pause(100)
 	end
-	-- Important Pause for CPU
-	Pause(150)
 end
 
 -- Main Loop
 while true do
-    IsOverweight()
+    CheckWeight()
     AutoBandageSelf()
     AutoCure()
     CheckHostileMobs()
-    Scavenger()
- 
+    Scavenger() 
     Pause(150)
 end
