@@ -38,74 +38,81 @@ local ImportantGear = {
 }
 
 local REAGENTS = {
-    BLACK_PEARL = 0x0F7A,
-    BLOOD_MOSS = 0x0F7B,
-    GARLIC = 0x0F84,
-    GINSENG = 0x0F85,
-    MANDRAKE_ROOT = 0x0F86,
-    NIGHTSHADE = 0x0F88,
-    SPIDERS_SILK = 0x0F8D,
+    BLACK_PEARL    = 0x0F7A,
+    BLOOD_MOSS     = 0x0F7B,
+    GARLIC	       = 0x0F84,
+    GINSENG 	   = 0x0F85,
+    MANDRAKE_ROOT  = 0x0F86,
+    NIGHTSHADE     = 0x0F88,
+    SPIDERS_SILK   = 0x0F8D,
     SULPHUROUS_ASH = 0x0F8C
 }
 
 -- Enable potions to craft (set to 1 to enable, 0 to disable)
 local POTIONS = {
     -- Refresh
-    REFRESH = 0,
-    TOTAL_REFRESH = 0,
-    -- Agility
-    AGILITY = 0,
-    GREATER_AGILITY = 0,
+    REFRESH 		  = 0,
+    TOTAL_REFRESH     = 0,
+   
+     -- Agility
+    AGILITY			  = 0,
+    GREATER_AGILITY   = 0,
+    
     -- Nightsight
-    NIGHTSIGHT = 0,
+    NIGHTSIGHT		  = 0,
+    
     -- Heals
-    LESSER_HEAL = 0,
-    HEAL = 0,
-    GREATER_HEAL = 0,
+    LESSER_HEAL 	  = 0,
+    HEAL 			  = 0,
+    GREATER_HEAL 	  = 0,
+    
     -- Strength
-    STRENGTH = 0,
-    GREATER_STRENGTH = 0,
+    STRENGTH 		  = 0,
+    GREATER_STRENGTH  = 0,
+    
     -- Poisons
-    LESSER_POISON = 0,
-    POISON = 1,
-    GREATER_POISON = 0,
-    DEADLY_POISON = 0,
-    LETHAL_POISON = 0,
+    LESSER_POISON     = 0,
+    POISON 			  = 1,
+    GREATER_POISON    = 0,
+    DEADLY_POISON     = 0,
+    LETHAL_POISON     = 0,
+    
     -- Cures
-    LESSER_CURE = 0,
-    CURE = 0,
-    GREATER_CURE = 0,
-    -- Explosions
-    LESSER_EXPLOSION = 0,
-    EXPLOSION = 0,
+    LESSER_CURE 	  = 0,
+    CURE 			  = 0,
+    GREATER_CURE 	  = 0,
+   
+     -- Explosions
+    LESSER_EXPLOSION  = 0,
+    EXPLOSION 	      = 0,
     GREATER_EXPLOSION = 0,
 }
 
------------------------------ Main script is below, do not make changes below this line -----------------------------
+------------- Main script is below, do not make changes below this line -------------
 
 -- Match reagent type and quantity to each potion
 local POTION_REAGENTS = {
-    REFRESH =           { {ID = REAGENTS.BLACK_PEARL,    Quantity = 1} },
-    TOTAL_REFRESH =     { {ID = REAGENTS.BLACK_PEARL,    Quantity = 2} },
-    AGILITY =           { {ID = REAGENTS.BLOOD_MOSS,     Quantity = 1} },
-    GREATER_AGILITY =   { {ID = REAGENTS.BLOOD_MOSS,     Quantity = 2} },
-    NIGHTSIGHT =        { {ID = REAGENTS.SPIDERS_SILK,   Quantity = 1} },
+    REFRESH =           { {ID = REAGENTS.BLACK_PEARL,    Quantity = 3} },
+    TOTAL_REFRESH =     { {ID = REAGENTS.BLACK_PEARL,    Quantity = 8} },
+    AGILITY =           { {ID = REAGENTS.BLOOD_MOSS,     Quantity = 3} },
+    GREATER_AGILITY =   { {ID = REAGENTS.BLOOD_MOSS,     Quantity = 8} },
+    NIGHTSIGHT =        { {ID = REAGENTS.SPIDERS_SILK,   Quantity = 3} },
     LESSER_HEAL =       { {ID = REAGENTS.GINSENG,        Quantity = 1} },
-    HEAL =              { {ID = REAGENTS.GINSENG,        Quantity = 2} },
-    GREATER_HEAL =      { {ID = REAGENTS.GINSENG,        Quantity = 3} },
-    STRENGTH =          { {ID = REAGENTS.MANDRAKE_ROOT,  Quantity = 1} },
-    GREATER_STRENGTH =  { {ID = REAGENTS.MANDRAKE_ROOT,  Quantity = 2} },
-    LESSER_POISON =     { {ID = REAGENTS.NIGHTSHADE,     Quantity = 1} },
-    POISON =            { {ID = REAGENTS.NIGHTSHADE,     Quantity = 2} },
-    GREATER_POISON =    { {ID = REAGENTS.NIGHTSHADE,     Quantity = 3} },
-    DEADLY_POISON =     { {ID = REAGENTS.NIGHTSHADE,     Quantity = 4} },
-    LETHAL_POISON =     { {ID = REAGENTS.NIGHTSHADE,     Quantity = 5} },
+    HEAL =              { {ID = REAGENTS.GINSENG,        Quantity = 5} },
+    GREATER_HEAL =      { {ID = REAGENTS.GINSENG,        Quantity = 10} },
+    STRENGTH =          { {ID = REAGENTS.MANDRAKE_ROOT,  Quantity = 3} },
+    GREATER_STRENGTH =  { {ID = REAGENTS.MANDRAKE_ROOT,  Quantity = 8} },
+    LESSER_POISON =     { {ID = REAGENTS.NIGHTSHADE,     Quantity = 3} },
+    POISON =            { {ID = REAGENTS.NIGHTSHADE,     Quantity = 5} },
+    GREATER_POISON =    { {ID = REAGENTS.NIGHTSHADE,     Quantity = 10} },
+    DEADLY_POISON =     { {ID = REAGENTS.NIGHTSHADE,     Quantity = 14} },
+    LETHAL_POISON =     { {ID = REAGENTS.NIGHTSHADE,     Quantity = 18} },
     LESSER_CURE =       { {ID = REAGENTS.GARLIC,         Quantity = 1} },
-    CURE =              { {ID = REAGENTS.GARLIC,         Quantity = 2} },
-    GREATER_CURE =      { {ID = REAGENTS.GARLIC,         Quantity = 3} },
-    LESSER_EXPLOSION =  { {ID = REAGENTS.SULPHUROUS_ASH, Quantity = 1} },
-    EXPLOSION =         { {ID = REAGENTS.SULPHUROUS_ASH, Quantity = 2} },
-    GREATER_EXPLOSION = { {ID = REAGENTS.SULPHUROUS_ASH, Quantity = 3} },
+    CURE =              { {ID = REAGENTS.GARLIC,         Quantity = 5} },
+    GREATER_CURE =      { {ID = REAGENTS.GARLIC,         Quantity = 10} },
+    LESSER_EXPLOSION =  { {ID = REAGENTS.SULPHUROUS_ASH, Quantity = 3} },
+    EXPLOSION =         { {ID = REAGENTS.SULPHUROUS_ASH, Quantity = 6} },
+    GREATER_EXPLOSION = { {ID = REAGENTS.SULPHUROUS_ASH, Quantity = 12} },
 }
 
 -- Gump button mappings for each potion
@@ -150,32 +157,6 @@ local function FindBottles()
     return Items.FindByType(ImportantGear.BOTTLE_ID, Player.Backpack)
 end
 
-local function FindReagents(reagents)
-    for _, reagent in ipairs(reagents) do
-        local foundItems = Items.FindByType(reagent.ID, Player.Backpack)
-        local totalQuantity = 0
-
-        if foundItems then
-            for _, item in ipairs(foundItems) do
-                totalQuantity = totalQuantity + item.Count
-            end
-        end
-
-        if totalQuantity < reagent.Quantity then
-            local reagentName = nil
-            for name, id in pairs(REAGENTS) do
-                if id == reagent.ID then
-                    reagentName = name
-                    break
-                end
-            end
-            Messages.Overhead("Not enough " .. reagentName .. "! Need " .. reagent.Quantity .. ", have " .. totalQuantity, Colors.Alert, Player.Serial)
-            return false
-        end
-    end
-    return true
-end
-
 local function CraftPotion(potionKey)
     local mortar = FindMortar()
     if not mortar then
@@ -185,11 +166,6 @@ local function CraftPotion(potionKey)
 
     if not FindBottles() then
         Messages.Overhead("No Bottles!", Colors.Alert, Player.Serial)
-        return false
-    end
-
-    if not FindReagents(POTION_REAGENTS[potionKey]) then
-        Messages.Overhead("Missing or insufficient reagents for " .. potionKey:gsub("_", " ") .. "!", Colors.Alert, Player.Serial)
         return false
     end
 
