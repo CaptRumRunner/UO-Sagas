@@ -1,22 +1,29 @@
---=====================================
+----------------------------------------------------------------------
 -- Auto Dexxer Assistant Script v0.1.3
--- By: Rum Runner
---=====================================
+-- Script created by: 
+
+--  ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
+-- | _ \ | | | | |  \/  |   | _ \ | | | | | \ | | | \ | | |  __| | _ \
+-- |   / | |_| | | |\/| |   |   / | |_| | |  \| | |  \| | |  _|  |   /
+-- |_|_\  \___/  |_|  |_|   |_|_\  \___/  |_|\__| |_|\__| |____| |_|_\
+
+----------------------------------------------------------------------
 
 -- Define Color Scheme
-local ALERT   = 33       -- Red
-local WARNING = 48       -- Orange
-local CAUTION = 53       -- Yellow
-local ACTION  = 67       -- Green
-local CONFIRM = 73       -- Light Green
-local INFO    = 84       -- Light Blue
-local STATUS  = 93       -- Blue
+local Colors = {
+    ALERT   = 33,      	-- Red
+    WARNING = 48,       -- Orange
+    CAUTION = 53,       -- Yellow
+    ACTION  = 67,       -- Green
+    CONFIRM = 73,       -- Light Green
+    INFO    = 84,       -- Light Blue
+    STATUS  = 93	-- Blue
+}
 
 -- Print Initial Start Up Greeting
-Messages.Print("___________________________________", INFO)
-Messages.Print("Auto Bandage Assistant Script v0.1.3", INFO)
-Messages.Print("Status: Running all functions continuously", STATUS)
-Messages.Print("___________________________________", INFO)
+Messages.Print("___________________________________", Colors.INFO)
+Messages.Print("Auto Dexxer Assistant Script v0.1.3", Colors.INFO)
+Messages.Print("___________________________________", Colors.INFO)
 
 -- User Settings
 local WeightBuffer           = 25     -- in stones
