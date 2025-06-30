@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
--- Train Poisoning Assistant Script v0.1.0
+-- Train Poisoning Assistant Script v0.1.1
 -- Script created by: 
 
 --  ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
@@ -11,32 +11,46 @@
 
 -- Define Color Scheme
 local Colors = {
-    ALERT = 33,
-    WARNING = 48,
-    CAUTION = 53,
-    ACTION = 67,
-    CONFIRM = 73,
-    INFO = 84,
-    STATUS = 93
+    Alert   = 33,      	-- Red
+    Warning = 48,       -- Orange
+    Caution = 53,       -- Yellow
+    Action  = 67,       -- Green
+    Confirm = 73,       -- Light Green
+    Info    = 84,       -- Light Blue
+    Status  = 93		-- Blue
 }
 
-local POISON_SKILL = "Poisoning"
-local COOLDOWN = 10000         -- Wait time between uses (ms)
-local TARGET_TIMEOUT = 2000   -- Max wait for targeting
-local CURE_POTION_ID = 0x0F07  -- Cure potion (adjust if using Greater Cure, etc.)
+-- Print Initial Start Up Greeting
+Messages.Print("___________________________________", Colors.Info)
+Messages.Print("Train Poisoning Assistant Script Running", Colors.Info)
+Messages.Print("___________________________________", Colors.Info)
 
--- Helper: Use a cure potion if poisoned
+-- User Settings
+local Config = {
+    POISON_SKILL   = "Poisoning",
+    COOLDOWN 	   = 10000,           -- Wait time between uses (ms)
+	TARGET_TIMEOUT = 2000  			 -- Max wait for targeting
+}	
+
+-- Define Important Items to Track
+local ImportantGear = {
+    CURE_POTION_ID = 0x0F07  -- Cure potion 
+}
+
+------------- Main script is below, do not make changes below this line -------------
+
+-- Use a cure potion if poisoned
 local function CheckAndCurePoison()
     if Journal.Contains("* You feel a bit nauseous! *") or Journal.Contains("* You feel disoriented and nauseous! *") then
-        local cure = Items.FindByType(CURE_POTION_ID, Player.Backpack)
+        local cure = Items.FindByType(ImportantGear.CURE_POTION_ID, Player.Backpack)
         if cure then
-            Messages.Overhead("Poisoned! Drinking cure...", Colors.ALERT, Player.Serial)
+            Messages.Overhead("Poisoned! Drinking cure...", Colors.Alert, Player.Serial)
             Player.UseObject(cure.Serial)
             Pause(1000)
             Journal.Clear()
             return true
         else
-            Messages.Overhead("Poisoned and no Cure Potion!", Colors.ALERT, Player.Serial)
+            Messages.Overhead("Poisoned and no Cure Potion!", Colors.Alert, Player.Serial)
         end
     end
     return false
@@ -45,40 +59,40 @@ end
 -- Main Loop
 while true do
     CheckAndCurePoison()
-    local poison = Items.FindByType(3850)   -- Poison
-    local kryss = Items.FindByType(5121)    -- Kryss
+    poison = Items.FindByType(3850)   -- Poison
+    kryss = Items.FindByType(5121)    -- Kryss
 
     if not poison then
-        Messages.Overhead("No Poison found!", Colors.ALERT, Player.Serial)
+        Messages.Overhead("No Poison found!", Colors.Alert, Player.Serial)
         break
     end
 
     if not kryss then
-        Messages.Overhead("No Kryss found!", Colors.ALERT, Player.Serial)
+        Messages.Overhead("No Kryss found!", Colors.Alert, Player.Serial)
         break
     end
 
     Journal.Clear()
-    Skills.Use(POISON_SKILL)
+    Skills.Use(Config.POISON_SKILL)
 
     -- Target the poison potion
-    if Targeting.WaitForTarget(TARGET_TIMEOUT) then
+    if Targeting.WaitForTarget(Config.TARGET_TIMEOUT) then
         Targeting.Target(poison.Serial)
     else
-        Messages.Overhead("Failed to target poison!", Colors.ALERT, Player.Serial)
-        Pause(COOLDOWN)
+        Messages.Overhead("Failed to target poison!", Colors.Alert, Player.Serial)
+        Pause(Config.COOLDOWN)
         goto continue
     end
 
     -- Target the kryss
-    if Targeting.WaitForTarget(TARGET_TIMEOUT) then
+    if Targeting.WaitForTarget(Config.TARGET_TIMEOUT) then
         Targeting.Target(kryss.Serial)
-        Messages.Overhead("Applying poison to Kryss...", Colors.ACTION, Player.Serial)
+        Messages.Overhead("Applying poison to Kryss...", Colors.Action, Player.Serial)
     else
-        Messages.Overhead("Failed to target Kryss!", Colors.ALERT, Player.Serial)
+        Messages.Overhead("Failed to target Kryss!", Colors.Alert, Player.Serial)
     end
 
     ::continue::
     CheckAndCurePoison()
-    Pause(COOLDOWN)
+    Pause(Config.COOLDOWN)
 end
