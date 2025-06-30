@@ -11,13 +11,13 @@
 
 -- Define Color Scheme
 local Colors = {
-    ALERT   = 33,      	-- Red
-    WARNING = 48,       -- Orange
-    CAUTION = 53,       -- Yellow
-    ACTION  = 67,       -- Green
-    CONFIRM = 73,       -- Light Green
-    INFO    = 84,       -- Light Blue
-    STATUS  = 93	-- Blue
+    Alert   = 33,      	-- Red
+    Warning = 48,       -- Orange
+    Caution = 53,       -- Yellow
+    Action  = 67,       -- Green
+    Confirm = 73,       -- Light Green
+    Info    = 84,       -- Light Blue
+    Status  = 93	-- Blue
 }
 
 -- Print Initial Start Up Greeting
@@ -26,22 +26,24 @@ Messages.Print("Auto Dexxer Assistant Script v0.1.3", Colors.INFO)
 Messages.Print("___________________________________", Colors.INFO)
 
 -- User Settings
-local WeightBuffer           = 25     -- in stones
-local LastFullHealthMessage  = 0
-local LastBandageMessage     = 0
-local LastBandagingMessage   = 0
-local FullHealthCooldown     = 10     -- in seconds
-local NoBandageCooldown      = 6      -- in seconds
-local BandagingCooldown      = 6      -- in seconds
-local BandageTimeout         = 20000  -- in milliseconds
-local BandageInterval        = 100    -- in milliseconds
-local CureCooldown           = 2      -- in seconds
-local LastCureTime           = 0
-local LastHostileMessageTime = 0
-local HostileMessageCooldown = 4      -- in seconds
+local Config = {
+    WeightBuffer           = 25     -- in stones
+    LastFullHealthMessage  = 0
+    LastBandageMessage     = 0
+    LastBandagingMessage   = 0
+    FullHealthCooldown     = 10     -- in seconds
+    NoBandageCooldown      = 6      -- in seconds
+    BandagingCooldown      = 6      -- in seconds
+    BandageTimeout         = 20000  -- in milliseconds
+    BandageInterval        = 100    -- in milliseconds
+    CureCooldown           = 2      -- in seconds
+    LastCureTime           = 0
+    LastHostileMessageTime = 0
+    HostileMessageCooldown = 4      -- in seconds
+}	
 
--- Items to Scavenger
-itemsToSearchFor = {
+-- Items to Scavenge
+ScavengeFor = {
         0x0f7a, -- Black Pearl
         0x0f7b, -- Blood Moss
         0x0f86, -- Mandrake Root
@@ -55,7 +57,6 @@ itemsToSearchFor = {
         0x0E21, -- Bandage
         0x0F0E, -- Empty Bottle
        }
-
 
 local AnimalNames = {
     "a deer", "a horse", "a cow", "a dog", "a sheep", "a cat", "a goat", "a pig", "a magpie", "a chicken", 
@@ -71,11 +72,11 @@ end
 
 local function IsOverweight()
     local MaxCharWeight = GetWeightLimit()
-    if Player.Weight >= MaxCharWeight + WeightBuffer then
-        Messages.Overhead("Overweight!!!!!", ALERT, Player.Serial)
+    if Player.Weight >= MaxCharWeight + Config.WeightBuffer then
+        Messages.Overhead("Overweight!!!!!", Colors.Alert, Player.Serial)
         return true     
      elseif Player.Weight >= MaxCharWeight then
-        Messages.Overhead("Nearly Overweight", WARNING, Player.Serial)
+        Messages.Overhead("Nearly Overweight", Colors.Warning, Player.Serial)
         return true    
     end
     return false
