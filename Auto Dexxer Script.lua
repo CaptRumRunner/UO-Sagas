@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
--- Auto Dexxer Assistant Script v0.1.3
+-- Auto Dexxer Assistant Script v0.2.0
 -- Script created by: 
 
 --  ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
@@ -22,28 +22,35 @@ local Colors = {
 
 -- Print Initial Start Up Greeting
 Messages.Print("___________________________________", Colors.Info)
-Messages.Print("Auto Dexxer Assistant Script v0.1.3", Colors.Info)
+Messages.Print("Auto Dexxer Assistant Script Running", Colors.Info)
 Messages.Print("___________________________________", Colors.Info)
 
 -- User Settings
 local Config = {
-    WeightBuffer           = 25     -- in stones (Edit as needed)
-    LastFullHealthMessage  = 0
-    LastBandageMessage     = 0
-    LastBandagingMessage   = 0
-    FullHealthCooldown     = 10     -- in seconds
-    NoBandageCooldown      = 6      -- in seconds
-    BandagingCooldown      = 6      -- in seconds
-    BandageTimeout         = 20000  -- in milliseconds
-    BandageInterval        = 100    -- in milliseconds
-    CureCooldown           = 2      -- in seconds
-    LastCureTime           = 0
-    LastHostileMessageTime = 0
+    WeightBuffer           = 25,     -- in stones (Edit as needed)
+    LastFullHealthMessage  = 0,
+    LastBandageMessage     = 0,
+    LastBandagingMessage   = 0,
+    FullHealthCooldown     = 10,     -- in seconds
+    NoBandageCooldown      = 6,      -- in seconds
+    BandagingCooldown      = 6,      -- in seconds
+    BandageTimeout         = 20000,  -- in milliseconds
+    BandageInterval        = 100,    -- in milliseconds
+    CureCooldown           = 2,      -- in seconds
+    LastCureTime           = 0,
+    LastHostileMessageTime = 0,
     HostileMessageCooldown = 4      -- in seconds
 }	
 
+-- Define Important Items to Track
+local ImportantItems = {
+    Bandage 	  = 0x0E21,       -- Bandage
+    Cure Potion   = 0x0F0E,  	  -- Cure Potion
+    Poison Potion = 0x0000	  -- Poison Potion
+}
+
 -- Items to Scavenge (Add "--" in front of anything you want to turn off)
-itemsToSearchFor = {
+local ItemsToSearchFor = {
         0x0f7a, -- Black Pearl
         0x0f7b, -- Blood Moss
         0x0f86, -- Mandrake Root
@@ -190,7 +197,7 @@ end
 
 -- Main Scavenger Loop
 local function Scavenger()
-	filter = {onground=true, rangemax=2, graphics=itemsToSearchFor}
+	filter = {onground=true, rangemax=2, graphics=ItemsToSearchFor}
 	
 	list = Items.FindByFilter(filter)
 	for index, item in ipairs(list) do
