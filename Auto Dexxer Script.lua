@@ -1,5 +1,5 @@
 ----------------------------------------------------------------------
--- Auto Dexxer Assistant Script v0.2.0
+-- Auto Dexxer Assistant Script v0.2.1
 -- Script created by: 
 
 --  ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
@@ -17,7 +17,7 @@ local Colors = {
     Action  = 67,       -- Green
     Confirm = 73,       -- Light Green
     Info    = 84,       -- Light Blue
-    Status  = 93	-- Blue
+    Status  = 93		-- Blue
 }
 
 -- Print Initial Start Up Greeting
@@ -27,7 +27,7 @@ Messages.Print("___________________________________", Colors.Info)
 
 -- User Settings
 local Config = {
-    WeightBuffer           = 25,     -- in stones (Edit as needed)
+    WeightBuffer           = 20,     -- in stones (Edit as needed)
     LastFullHealthMessage  = 0,
     LastBandageMessage     = 0,
     LastBandagingMessage   = 0,
@@ -39,14 +39,14 @@ local Config = {
     CureCooldown           = 2,      -- in seconds
     LastCureTime           = 0,
     LastHostileMessageTime = 0,
-    HostileMessageCooldown = 4      -- in seconds
+    HostileMessageCooldown = 2      -- in seconds
 }	
 
 -- Define Important Items to Track
 local ImportantGear = {
-    Bandage 	  = 0x0E21,       -- Bandages
-    Cure Potion   = 0x0F0E,  	  -- Cure Potions
-    Poison Potion = 0x0F0A	  -- Poison Potions
+    Bandage 	 = 0x0E21,       -- Bandages
+    CurePotion   = 0x0F0E,  	 -- Cure Potions
+    PoisonPotion = 0x0F0A	     -- Poison Potions
 }
 
 -- Items to Scavenge (Add "--" in front of anything you want to turn off)
@@ -74,31 +74,19 @@ local AnimalNamesToIgnore = {
     ["a gorilla"] = true, ["a raven"] = true, ["a crow"] = true, ["a rabbit"] = true, ["a black bear"] = true,
     ["a hind"] = true, ["a great hart"] = true, ["a grizzly bear"] = true, ["a brown bear"] = true,
     ["a pack horse"] = true, ["a kingfisher"] = true, ["a lapwing"] = true, ["a timber wolf"] = true,
+    ["a wren"] = true, ["a sparrow"] = true,["a nuthatch"] = true,
 }
 
------------------------------ Main script is below, do not make changes below this line -----------------------------
+------------------------- Main script is below, do not make changes below this line -------------------------
 
 -- Function to Check for Important Gear
-local function CheckImportantGear()
-    local missingItems = {} -- Table to store missing items
-    for _, item in ipairs(ImportantGear) do
-        local foundItems = Items.FindByType(item.ID, Player.Backpack)
-        if not foundItems or #foundItems == 0 then
-            table.insert(missingItems, item.Name) -- Add missing item to the list
-        end
-    end
-    if #missingItems > 0 then    -- Display Message for Missing Items
-        for _, itemName in ipairs(missingItems) do
-            Messages.Overhead("Missing: " .. itemName, Colors.Alert, Player.Serial)
-        end
-    end
-end
+-- Placeholder, not working yet
 
 -- Check character weight to alert user to weight issue
 local function CheckWeight()
     local SafeCharWeight = Player.MaxWeight - Config.WeightBuffer
     if Player.Weight >= SafeCharWeight + Config.WeightBuffer then
-        Messages.Overhead("Overweight - Cant Move!!", Colors.Alert, Player.Serial)
+        Messages.Overhead("Overweight!!", Colors.Alert, Player.Serial)
         return true
     elseif Player.Weight >= SafeCharWeight then
         Messages.Overhead("Nearly Overweight!", Colors.Warning, Player.Serial)
@@ -107,111 +95,63 @@ local function CheckWeight()
     return false
 end
 
--- Main Bandaging Loop based on priority
+-- Bandaging
 local function AutoBandage()
-    local Bandage = Items.FindByType(3617) -- Find bandages in inventory
-    if not Bandage then
-        local now = os.clock()
-        if now - Config.LastBandageMessage >= Config.NoBandageCooldown then
-            Messages.Overhead("No bandages found!", Colors.Alert, Player.Serial)
-            Config.LastBandageMessage = now
-        end
-        return
-    end
-
-    Journal.Clear()
-
-    -- Find friends within 2 tiles
-    local friends = Mobiles.FindByFilter({
-        range = 2,
-        notoriety = 1, -- Friendly notoriety
-	human = true,		
-        dead = false, 
-        hits = function(mob) return mob.Hits < mob.HitsMax end -- Only injured friends
-    })
-
-    -- Find pets within 2 tiles
-    local pets = Mobiles.FindByFilter({
-        range = 2,
-        notoriety = 1, -- Friendly notoriety
-        human = false,
-	dead = false, 
-        hits = function(mob) return mob.Hits < mob.HitsMax end, -- Only injured pets
-        ispet = true -- Ensure they are pets
-    })
-
-    -- Determine target priority
-    local target = nil
-    local bandageTime = nil
-    if #friends > 0 then
-        target = friends[1] -- Prioritize the first injured friend
-	local healingSkill = Player.Skills.Healing or 0 -- Healing skill level
-        local dexterity = Player.Stats.Dexterity or 0 -- Dexterity attribute	
-        bandageTime = math.max(baseTime - (healingSkill / 10) - (dexterity / 10), 2) 
-    elseif #pets > 0 then
-        target = pets[1] -- If no friends, prioritize the first injured pet
-        local baseTime = 10 -- Base bandaging time in seconds
-        local healingSkill = Player.Skills.Healing or 0 -- Healing skill level
-        local dexterity = Player.Stats.Dexterity or 0 -- Dexterity attribute
-        bandageTime = math.max(baseTime - (healingSkill / 10) - (dexterity / 10), 2) -- Minimum bandage time is 2 seconds
-    elseif Player.Hits < Player.HitsMax then
-        target = Player -- If no friends or pets, heal self
-        local baseTime = 10 -- Base bandaging time in seconds
-        local healingSkill = Player.Skills.Healing or 0 -- Healing skill level
-        local dexterity = Player.Stats.Dexterity or 0 -- Dexterity attribute
-        bandageTime = math.max(baseTime - (healingSkill / 10) - (dexterity / 10), 2) -- Minimum bandage time is 2 seconds
-    end
-
-    -- Perform bandaging if a target is found
-    if target then
-        Player.UseObject(Bandage.Serial)
-        if Targeting.WaitForTarget(1000) then
-            Targeting.TargetObject(target.Serial)
-            local now = os.clock()
-            if now - Config.LastBandagingMessage >= Config.BandagingCooldown then
-                Messages.Overhead("Bandaging " .. (target.Name or "self"), Colors.Action, Player.Serial)
-                Config.LastBandagingMessage = now
-
-                local elapsed = 0
-                local result = nil
-                local initialHits = target.Hits -- Record initial health
-                while elapsed < bandageTime * 1000 do
-                    local remainingTime = math.ceil((bandageTime * 1000 - elapsed) / 1000) -- Calculate seconds remaining
-                    Messages.Overhead("Bandaging... " .. remainingTime .. "s remaining", Colors.Info, Player.Serial)
-                    if Journal.Contains("You finish applying the bandages") then
-                        result = "full"
-                        local healedAmount = target.Hits - initialHits -- Calculate amount healed
-                        Messages.Overhead("Healed " .. healedAmount .. " HP", Colors.Confirm, target.Serial) -- Display healed amount over the target
-                        break
-                    elseif Journal.Contains("You apply the bandages, but they barely help.") then
-                        result = "partial"
-                        local healedAmount = target.Hits - initialHits -- Calculate amount healed
-                        Messages.Overhead("Healed " .. healedAmount .. " HP (barely helped)", Colors.Warning, target.Serial) -- Display healed amount over the target
-                        break
-                    elseif Journal.Contains("You have failed to cure your target.") then
-                        result = "failed"
-                        Messages.Overhead("Bandage Failed", Colors.Alert, target.Serial) -- Display failure message over the target
-                        break
+    if Player.Hits < Player.HitsMax then
+        local Bandage = Items.FindByType(ImportantGear.Bandage, Player.Backpack)
+        if Bandage then
+            Journal.Clear()
+            Player.UseObject(Bandage.Serial)
+            if Targeting.WaitForTarget(1000) then
+                Targeting.TargetSelf()
+                local now = os.clock()
+                if now - Config.LastBandagingMessage >= Config.BandagingCooldown then
+                    Messages.Overhead("Bandaging", Colors.Action, Player.Serial)
+                    Config.LastBandagingMessage = now
+                    
+                    local elapsed = 0
+                    local result = nil
+                    
+                    while elapsed < Config.BandageTimeout do
+                        if Journal.Contains("You finish applying the bandages") then
+                            result = "full"
+                            Messages.Overhead("Bandage complete!", Colors.Confirm, Player.Serial)
+                            break
+                        elseif Journal.Contains("You apply the bandages, but they barely help.") then
+                            result = "partial"
+                            Messages.Overhead("Bandage barely helped", Colors.Warning, Player.Serial)
+                            break
+                        elseif Journal.Contains("You have failed to cure your target.") then
+                            result = "partial"
+                            Messages.Overhead("Bandage Failed", Colors.Alert, Player.Serial)
+                            break
+                        end
+                        Pause(Config.BandageInterval)
+                        elapsed = elapsed + Config.BandageInterval
                     end
-                    Pause(Config.BandageInterval)
-                    elapsed = elapsed + Config.BandageInterval
-                end
 
-                if not result then
-                    Messages.Overhead("Bandage timed out", Colors.Alert, Player.Serial)
+                    if not result then
+                        Messages.Overhead("Bandage timed out", Colors.Alert, Player.Serial)
+                    end
                 end
+            end
+        else
+            local now = os.clock()
+            if now - Config.LastBandageMessage >= Config.NoBandageCooldown then
+                Messages.Overhead("No bandages found!", Colors.Alert, Player.Serial)
+                LastBandageMessage = now
             end
         end
     else
         local now = os.clock()
         if now - Config.LastFullHealthMessage >= Config.FullHealthCooldown then
-            Messages.Overhead("No injured targets found", Colors.Info)
+            Messages.Overhead("Full Health", Colors.Info)
             Config.LastFullHealthMessage = now
         end
     end
 end
 
--- Cure Poison
+-- Cure Poison (doesnt work if you have a shield, will fix this in the future)
 local function AutoCure()
     local now = os.clock()
     if now - Config.LastCureTime < Config.CureCooldown then return end
@@ -248,6 +188,7 @@ local function CheckHostileMobs()
     end
 end
 
+
 -- Scavenger Loop
 local function Scavenger()
 	local filter = {onground=true, rangemax=2, graphics=ItemsToSearchFor}	
@@ -263,7 +204,7 @@ end
 
 -- Main Loop
 while true do
-    CheckImportantGear()
+    --CheckImportantGear()
     CheckWeight()
     AutoBandage()
     AutoCure()
