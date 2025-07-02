@@ -1,0 +1,323 @@
+local function AutoBandageSelf()
+    if Player.Hits < Player.HitsMax then
+        local Bandage = Items.FindByType(3617)
+        if Bandage then
+            Journal.Clear()
+            Player.UseObject(Bandage.Serial)
+            if Targeting.WaitForTarget(1000) then
+                Targeting.TargetSelf()
+                local startTime = os.clock()
+                local elapsed = 0
+                local result = nil
+
+                while elapsed < Config.BandageTimeout do
+                    -- Periodically check the journal for bandaging results
+                    if Journal.Contains("You finish applying the bandages") then
+                        result = "full"
+                        Messages.Overhead("Bandage complete!", Colors.Confirm, Player.Serial)
+                        break
+                    elseif Journal.Contains("You apply the bandages, but they barely help.") then
+                        result = "partial"
+                        Messages.Overhead("Bandage barely helped", Colors.Warning, Player.Serial)
+                        break
+                    elseif Journal.Contains("You have failed to cure your target.") then
+                        result = "partial"
+                        Messages.Overhead("Bandage Failed", Colors.Alert, Player.Serial)
+                        break
+                    end
+
+                    -- Allow other functions to run
+                    Pause(50) -- Short pause to prevent CPU overload
+                    elapsed = os.clock() - startTime
+
+                    -- Run other functions during the pause
+                    IsOverweight()
+                    AutoCure()
+                    CheckHostileMobs()
+                end
+
+                if not result then
+                    Messages.Overhead("Bandage timed out", Colors.Alert, Player.Serial)
+                end
+            end
+        else
+            local now = os.clock()
+            if now - Config.LastBandageMessage >= Config.NoBandageCooldown then
+                Messages.Overhead("No bandages found!", Colors.Alert, Player.Serial)
+                Config.LastBandageMessage = now
+            end
+        end
+    else
+        local now = os.clock()
+        if now - Config.LastFullHealthMessage >= Config.FullHealthCooldown then
+            Messages.Overhead("Full Health", Colors.Info)
+            Config.LastFullHealthMessage = now
+        end
+    end
+end
+
+------------------------------------------------------------------------------------------
+
+-- Function to Check for Important Gear in Backpack
+local function CheckImportantGear()
+    for itemName, itemID in pairs(ImportantGear) do
+        local item = Items.FindByType(itemID, Player.Backpack)
+        if item then
+            Messages.Print(itemName .. " found in backpack!", Colors.Confirm)
+        else
+            Messages.Overhead(itemName .. " is missing!", Colors.Alert, Player.Serial)
+        end
+    end
+end
+
+local function CheckImportantGear()
+    for itemName, itemID in pairs(ImportantGear) do
+        local item = Items.FindByType(itemID, Player.Backpack)
+        if item then
+            if item.Amount < 10 then -- Warn if quantity is less than 10
+                Messages.Overhead(itemName .. " is low (" .. item.Amount .. " left)!", Colors.Warning, Player.Serial)
+            else
+                Messages.Print(itemName .. " found in backpack (" .. item.Amount .. " available)!", Colors.Confirm)
+            end
+        else
+            Messages.Overhead(itemName .. " is missing!", Colors.Alert, Player.Serial)
+        end
+    end
+end
+
+------------------------------------------------------------------------------------------
+
+local function TestFindByLayer()
+    local rightHandItem = Items.FindByLayer(1) -- OneHanded layer (right hand)
+    local leftHandItem = Items.FindByLayer(2) -- TwoHanded layer (left hand)
+
+    if rightHandItem then
+        Messages.Print("Right hand item found: " .. rightHandItem.Name .. " (Serial: " .. rightHandItem.Serial .. ")", Colors.Info)
+    else
+        Messages.Print("No item found in right hand!", Colors.Warning)
+    end
+
+    if leftHandItem then
+        Messages.Print("Left hand item found: " .. leftHandItem.Name .. " (Serial: " .. leftHandItem.Serial .. ")", Colors.Info)
+    else
+        Messages.Print("No item found in left hand!", Colors.Warning)
+    end
+end
+
+-- Call the test function
+TestFindByLayer()
+
+------------------------------------------------------------------------------------------
+
+local function CheckReagents(potionKey)
+    local reagents = POTION_REAGENTS[potionKey]
+    if not reagents then
+        Messages.Overhead("No reagent mapping for " .. potionKey:gsub("_", " ") .. "!", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    for _, reagent in ipairs(reagents) do
+        local item = Items.FindByType(reagent.ID, Player.Backpack)
+        if not item or item.Amount < reagent.Quantity then
+            Messages.Overhead("Not enough " .. reagent.ID:gsub("_", " ") .. " for " .. potionKey:gsub("_", " ") .. "!", Colors.Alert, Player.Serial)
+            return false
+        end
+    end
+
+    return true
+end
+
+------------------------------------------------------------------------------------------
+
+local function CraftPotion(potionKey)
+    local mortar = FindMortar()
+    if not mortar then
+        Messages.Overhead("No Mortar & Pestle!", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    if not FindBottles() then
+        Messages.Overhead("No Bottles!", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    if not CheckReagents(potionKey) then
+        return false -- Stop crafting if reagents are insufficient
+    end
+
+    local buttons = GUMP_BUTTONS[potionKey]
+    if not buttons then
+        Messages.Overhead("No button mapping for " .. potionKey:gsub("_", " ") .. "!", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    Player.UseObject(mortar.Serial)
+    if not Gumps.WaitForGump(Config.GUMP_ID, 1000) then
+        Messages.Overhead("Gump failed to open!", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    -- First time for this potion, navigate the full menu
+    if Config.lastPotionKey ~= potionKey then
+        Gumps.PressButton(Config.GUMP_ID, buttons.category)
+        Pause(750)
+        Gumps.PressButton(Config.GUMP_ID, buttons.craft)
+        Pause(750)
+        Gumps.PressButton(Config.GUMP_ID, buttons.final)
+        Config.lastPotionKey = potionKey
+    else
+        -- Use "Make Last" button for repeated crafting
+        Pause(500)
+        Gumps.PressButton(Config.GUMP_ID, 21)
+    end
+
+    Messages.Overhead("Crafting " .. potionKey:gsub("_", " ") .. "!", Colors.Action, Player.Serial)
+    Pause(3000)
+    return true
+end
+
+------------------------------------------------------------------------------------------
+
+-- Main training loop
+while true do
+    local crafted = false
+    for key, enabled in pairs(POTIONS) do
+        if enabled == 1 then
+            crafted = CraftPotion(key) or crafted
+        end
+    end
+    if not crafted then
+        Messages.Overhead("No enabled potions to craft or stopped.", Colors.Alert, Player.Serial)
+        break
+    end
+end
+
+------------------------------------------------------------------------------------------
+local function CheckSingleEnabledPotion()
+    local enabledCount = 0
+    local enabledPotion = nil
+
+    for key, enabled in pairs(POTIONS) do
+        if enabled == 1 then
+            enabledCount = enabledCount + 1
+            enabledPotion = key
+        end
+    end
+
+    if enabledCount > 1 then
+        Messages.Overhead("Multiple potions enabled! Please enable only one.", Colors.Alert, Player.Serial)
+        return false
+    elseif enabledCount == 0 then
+        Messages.Overhead("No potions enabled! Please enable one potion.", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    return enabledPotion -- Return the enabled potion key
+end
+
+------------------------------------------------------------------------------------------
+-- User Settings
+local Config = {
+    GUMP_ID       = 2653346093,
+    lastPotionKey = nil,
+    PotionsToCraft = 10 -- Number of potions to craft (user can edit this value)
+}
+
+-- Main training loop
+local craftedCount = 0 -- Track the number of potions crafted
+
+while craftedCount < Config.PotionsToCraft do
+    local enabledPotion = CheckSingleEnabledPotion()
+    if not enabledPotion then
+        break -- Stop execution if multiple or no potions are enabled
+    end
+
+    local crafted = CraftPotion(enabledPotion)
+    if crafted then
+        craftedCount = craftedCount + 1 -- Increment the crafted count
+        Messages.Overhead("Crafted " .. craftedCount .. "/" .. Config.PotionsToCraft .. " potions!", Colors.Info, Player.Serial)
+    else
+        Messages.Overhead("Failed to craft " .. enabledPotion:gsub("_", " ") .. "!", Colors.Alert, Player.Serial)
+        break
+    end
+end
+
+Messages.Overhead("Crafting complete! Total potions crafted: " .. craftedCount, Colors.Confirm, Player.Serial)
+
+
+
+
+------------------------------------------------------------------------------------------
+local function FindItemInContainers(itemID, containerSerial)
+    local items = Items.FindByFilter({container = containerSerial, graphics = {itemID}})
+    if items and #items > 0 then
+        return items[1] -- Return the first matching item
+    end
+
+    -- Check nested containers
+    local containers = Items.FindByFilter({container = containerSerial, type = 0x0E75}) -- Type for containers
+    for _, container in ipairs(containers) do
+        local nestedItem = FindItemInContainers(itemID, container.Serial)
+        if nestedItem then
+            return nestedItem
+        end
+    end
+
+    return nil -- Item not found
+end
+
+local function FindMortar()
+    return FindItemInContainers(ImportantGear.MORTAR_ID, Player.Backpack.Serial)
+end
+
+local function FindBottles()
+    return FindItemInContainers(ImportantGear.BOTTLE_ID, Player.Backpack.Serial)
+end
+------------------------------------------------------------------------------------------
+
+local function TrackPKs()
+    local pks = Mobiles.FindByFilter({range = 15, notoriety = 6, dead = false, human = true}) -- Find PKs within 15 tiles
+    if pks then
+        for _, pk in ipairs(pks) do
+            if pk and pk.Name then
+                -- Calculate distance from player
+                local distance = math.sqrt((Player.X - pk.X)^2 + (Player.Y - pk.Y)^2)
+
+                -- Determine direction of PK relative to player
+                local direction = ""
+                if pk.Y < Player.Y then
+                    direction = "North"
+                elseif pk.Y > Player.Y then
+                    direction = "South"
+                end
+
+                if pk.X < Player.X then
+                    direction = direction .. "West"
+                elseif pk.X > Player.X then
+                    direction = direction .. "East"
+                end
+
+                -- Determine opposite direction for RUN
+                local oppositeDirection = direction:gsub("North", "South"):gsub("South", "North"):gsub("West", "East"):gsub("East", "West")
+
+                -- Display overhead message
+                Messages.Overhead("PK Detected: " .. pk.Name .. " (" .. math.floor(distance) .. " tiles away). RUN " .. oppositeDirection .. "!", Colors.Alert, Player.Serial)
+            end
+        end
+    end
+end
+
+-- Main Loop
+while true do
+    CheckWeight()
+    AutoBandage()
+    AutoCure()
+    CheckHostileMobs()
+    TrackPKs() -- Track PKs and display overhead messages
+    Scavenger() 
+    Pause(150)
+end
+------------------------------------------------------------------------------------------
+
+
+------------------------------------------------------------------------------------------
