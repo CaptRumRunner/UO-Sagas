@@ -3,7 +3,7 @@
 Train Inscription Assistant Script
 --------------------------------------------------------------------
 Version History:
-v0.1.0 - Initial release
+v1.0.0 - Initial release
 --------------------------------------------------------------------
 Script created by: 
   ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
@@ -15,51 +15,56 @@ Script created by:
 This script is designed to be used within the UO Sagas environment.
 --------------------------------------------------------------------
 Script Description: 
-Dynamically crafts Recall, level 7, or level 8 spells.
+Dynamically crafts spells based on skill ranges. Can be used for crafting
+even when gaining skill is not a priority.
 --------------------------------------------------------------------
 Script Notes:
-1) Ensure you have a Scribe's Pen, blank scrolls and regs in your backpack.
-2) Script does not restock from a bank (yet)
-3) Users can enable specific level 7 or level 8 spells to craft so you
-can make what you want or keep switching spells so you have some of each.
-4) Please select one spell at a time. Update that below, save script and run.
+1) Ensure you have a Scribes Pen, blank scrolls and regs in your backpack.
+2) Script does not restock from a bank
+3) Users can enable specific level spells to craft so you can make what 
+you want or keep switching spells so you have some of each.
+4) Please select one spell at a time. Update spell below, save script and run.
 5) No need to select a spell until you get to 65 as you will only craft recall.
 --------------------------------------------------------------------
 ]]
 
--- Define Color Scheme
+-- Color Scheme
 local Colors = {
-    Alert   = 33,       -- Red
-    Warning = 48,       -- Orange
-    Caution = 53,       -- Yellow
-    Action  = 67,       -- Green
-    Confirm = 73,       -- Light Green
-    Info    = 84,       -- Light Blue
-    Status  = 93        -- Blue
+    Alert   = 33,  -- Red
+    Warning = 48,  -- Orange
+    Caution = 53,  -- Yellow
+    Action  = 67,  -- Green
+    Confirm = 73,  -- Light Green
+    Info    = 84,  -- Light Blue
+    Status  = 93   -- Blue
 }
 
--- Print Initial Start-Up Greeting
-Messages.Print("_________________________________________", Colors.Info)
+-- Start Message
+Messages.Print("___________________________________", Colors.Info)
 Messages.Print("Welcome to the Train Inscription Assistant Script!", Colors.Info)
 Messages.Print("Booting up... Initializing systems... ", Colors.Info)
-Messages.Print("_________________________________________", Colors.Info)
+Messages.Print("___________________________________", Colors.Info)
 
--- User Settings (Feel free to edit this section as needed)
+-- Config
 local Config = {
-    GUMP_ID = 2653346093,       -- Gump ID for Inscription (change if different)
-    MAKE_LAST_BUTTON_ID = 21    -- Button ID for "Make Last"
+    GUMP_ID = 2653346093,
+    MAKE_LAST_BUTTON_ID = 21,
+    lastSpellKey = nil
 }
 
--- Define Important Items to Track
+-- Items
 local ImportantGear = {
-    TOOL_ID = 0x0FBF,           -- Scribe's Pen
-    SCROLL_ID = 0x0EF3          -- Blank Scroll
+    TOOL_ID   = 0x0FBF,  -- Scribe's Pen
+    SCROLL_ID = 0x0EF3   -- Blank Scroll
 }
 
--- User Configuration: Enable specific level 7 and level 8 spells to craft
+-- Spells to Enable
 local SPELLS_ENABLED = {
-    -- Level 7 Spells
-    CHAIN_LIGHTNING       = 0,         -- Enable crafting Chain Lightning (1 to enable, 0 to disable)
+    -- Level 6
+    MARK                  = 1,         -- Enable crafting Mark (1 to enable, 0 to disable)
+ 
+    -- Level 7 Spells 
+    CHAIN_LIGHTNING       = 0,         -- Enable crafting Chain Lightning
     ENERGY_FIELD          = 0,         -- Enable crafting Energy Field
     FLAME_STRIKE          = 0,         -- Enable crafting Flame Strike
     GATE_TRAVEL           = 0,         -- Enable crafting Gate Travel
@@ -79,101 +84,103 @@ local SPELLS_ENABLED = {
     WATER_ELEMENTAL       = 0          -- Enable crafting Water Elemental
 }
 
+-- Gump Buttons
 local GUMP_BUTTONS = {
-    -- Level 4 Spell
-    RECALL =                {name = "Recall", category = 22, craft = 52, final = 2},
+    -- Level 4
+    RECALL          = {name = "Recall", category = 22, craft = 52, final = 51},
 
-    -- Level 7 Spells
-    CHAIN_LIGHTNING =       {name = "Chain Lightning", category = 57, craft = 3, final = 2},
-    ENERGY_FIELD =          {name = "Energy Field", category = 57, craft = 10, final = 9},
-    FLAME_STRIKE =          {name = "Flame Strike", category = 57, craft = 17, final = 16},
-    GATE_TRAVEL =           {name = "Gate Travel", category = 57, craft = 24, final = 23},
-    MANA_VAMPIRE =          {name = "Mana Vampire", category = 57, craft = 31, final = 30},
-    MASS_DISPEL =           {name = "Mass Dispel", category = 57, craft = 38, final = 37},
-    METEOR_SWARM =          {name = "Meteor Swarm", category = 57, craft = 45, final = 44},
-    POLYMORPH =             {name = "Polymorph", category = 57, craft = 52, final = 51},
+    -- Level 6
+    MARK            = {name = "Mark", category = 36, craft = 31, final = 30},
+    
+    -- Level 7
+    CHAIN_LIGHTNING = {name = "Chain Lightning", category = 43, craft = 3, final = 2},
+    ENERGY_FIELD    = {name = "Energy Field", category = 43, craft = 10, final = 9},
+    FLAME_STRIKE    = {name = "Flame Strike", category = 43, craft = 17, final = 16},
+    GATE_TRAVEL     = {name = "Gate Travel", category = 43, craft = 24, final = 23},
+    MANA_VAMPIRE    = {name = "Mana Vampire", category = 43, craft = 31, final = 30},
+    MASS_DISPEL     = {name = "Mass Dispel", category = 43, craft = 38, final = 37},
+    METEOR_SWARM    = {name = "Meteor Swarm", category = 43, craft = 45, final = 44},
+    POLYMORPH       = {name = "Polymorph", category = 43, craft = 52, final = 51},
 
-    -- Level 8 Spells
-    EARTHQUAKE =            {name = "Earthquake", category = 64, craft = 3, final = 2},
-    ENERGY_VORTEX =         {name = "Energy Vortex", category = 64, craft = 10, final = 9},
-    RESURRECTION =          {name = "Resurrection", category = 64, craft = 17, final = 16},
-    AIR_ELEMENTAL =         {name = "Air Elemental", category = 64, craft = 24, final = 23},
-    SUMMON_DAEMON =         {name = "Summon Daemon", category = 64, craft = 31, final = 30},
-    EARTH_ELEMENTAL =       {name = "Earth Elemental", category = 64, craft = 38, final = 37},
-    FIRE_ELEMENTAL =        {name = "Fire Elemental", category = 64, craft = 45, final = 44},
-    WATER_ELEMENTAL =       {name = "Water Elemental", category = 64, craft = 52, final = 51}
+    -- Level 8
+    EARTHQUAKE      = {name = "Earthquake", category = 50, craft = 3, final = 2},
+    ENERGY_VORTEX   = {name = "Energy Vortex", category = 50, craft = 10, final = 9},
+    RESURRECTION    = {name = "Resurrection", category = 50, craft = 17, final = 16},
+    AIR_ELEMENTAL   = {name = "Air Elemental", category = 50, craft = 24, final = 23},
+    SUMMON_DAEMON   = {name = "Summon Daemon", category = 50, craft = 31, final = 30},
+    EARTH_ELEMENTAL = {name = "Earth Elemental", category = 50, craft = 38, final = 37},
+    FIRE_ELEMENTAL  = {name = "Fire Elemental", category = 50, craft = 45, final = 44},
+    WATER_ELEMENTAL = {name = "Water Elemental", category = 50, craft = 52, final = 51}
 }
 
-------------- Main script is below, do not make changes below this line -------------
-
--- Helper Functions
+-- Helper: Gear check
 local function CheckImportantGear()
     local pen = Items.FindByType(ImportantGear.TOOL_ID, Player.Backpack)
     local scrolls = Items.FindByType(ImportantGear.SCROLL_ID, Player.Backpack)
 
     if not pen then
-        Messages.Overhead("No Scribe's Pen found in backpack!", Colors.Alert, Player.Serial)
+        Messages.Overhead("No Scribe's Pen found!", Colors.Alert, Player.Serial)
         return false
     end
 
     if not scrolls or scrolls.Amount < 1 then
-        Messages.Overhead("No Blank Scrolls found in backpack!", Colors.Alert, Player.Serial)
+        Messages.Overhead("No Blank Scrolls!", Colors.Alert, Player.Serial)
         return false
     end
 
     return true
 end
 
+-- Helper: Skill
 local function GetSkill()
-    local skill = Skills.GetValue("Inscription")
-    return tonumber(string.format("%.1f", skill))
+    return tonumber(string.format("%.1f", Skills.GetValue("Inscription")))
 end
 
--- Main Crafting Function
-local lastItem = nil
+-- Crafting
 local function CraftScroll()
-    -- Check for sufficient mana
+    -- Mana check
     if Player.Mana < 40 then
         Messages.Overhead("Not enough mana! Meditating...", Colors.Warning, Player.Serial)
         Skills.Use("Meditation")
         Pause(25000)
     end
 
-    -- Check for important gear
-    if not CheckImportantGear() then
-        return false
-    end
+    -- Gear check
+    if not CheckImportantGear() then return false end
 
     local skill = GetSkill()
     local scroll = nil
+    local selectedKey = nil
 
-    -- Determine which scrolls or spells to craft based on skill level
-    if skill >= 20.0 and skill < 65.0 then
-        scroll = GUMP_BUTTONS.RECALL -- Recall scroll
-    elseif skill >= 65.0 and skill <= 85.0 then
+    if skill < 20.0 then
+        Messages.Overhead("Skill too low - Please visit a NPC and buy Inscription.", Colors.Alert, Player.Serial)
+        return false
+    elseif skill >= 20.0 and skill < 65.0 then
+        scroll = GUMP_BUTTONS.RECALL
+        selectedKey = "RECALL"
+    elseif skill >= 65.0 and skill < 100.0 then
         for spellName, enabled in pairs(SPELLS_ENABLED) do
             if enabled == 1 and GUMP_BUTTONS[spellName] then
-                scroll = GUMP_BUTTONS[spellName]
-                break
+                -- Check if it's a Level 8 spell and block it if skill is under 75
+                local isLevel8 = GUMP_BUTTONS[spellName].category == 50
+                if isLevel8 and skill < 75.0 then
+                    Messages.Overhead("Skill is not high enough for level 8", Colors.Warning, Player.Serial)
+                    -- Skip level 8 spell until skill is 75.0+
+                else
+                    scroll = GUMP_BUTTONS[spellName]
+                    selectedKey = spellName
+                    break
+                end
             end
         end
-    elseif skill > 85.0 and skill < 100.0 then
-        for spellName, enabled in pairs(SPELLS_ENABLED) do
-            if enabled == 1 and GUMP_BUTTONS[spellName] then
-                scroll = GUMP_BUTTONS[spellName]
-                break
-            end
-        end
-    elseif skill == 100.0 then
-        Messages.Overhead("Inscription skill has reached 100.0! Script ending.", Colors.Confirm, Player.Serial)
-        return false    
     else
-        Messages.Overhead("Skill too low to craft Recall, level 7, or level 8 spells!", Colors.Alert, Player.Serial)
+        Messages.Overhead("Skill too low to craft scrolls!", Colors.Alert, Player.Serial)
         return false
     end
 
     if not scroll then
-        Messages.Overhead("No enabled spell matches current skill level!", Colors.Alert, Player.Serial)
+        Config.lastSpellKey = nil
+        Messages.Overhead("No spell enabled for this skill level!", Colors.Alert, Player.Serial)
         return false
     end
 
@@ -183,24 +190,25 @@ local function CraftScroll()
         return false
     end
 
-    if lastItem ~= scroll.name then
+    -- Navigate menu or make last
+    if Config.lastSpellKey ~= selectedKey then
         Gumps.PressButton(Config.GUMP_ID, scroll.category)
-        Pause(600)
+        Pause(750)
         Gumps.PressButton(Config.GUMP_ID, scroll.craft)
-        Pause(600)
-        lastItem = scroll.name
+        Pause(750)
+        Gumps.PressButton(Config.GUMP_ID, scroll.final)
+        Config.lastSpellKey = selectedKey
     else
-        Pause(600)
+        Pause(500)
         Gumps.PressButton(Config.GUMP_ID, Config.MAKE_LAST_BUTTON_ID)
     end
 
     Messages.Overhead("Scribing: " .. scroll.name, Colors.Action, Player.Serial)
-    Pause(4000)
+    Pause(3000)
     return true
 end
 
--- Main Loop
+-- Loop
 while true do
-    local crafted = CraftScroll()
-    if not crafted then break end
+    if not CraftScroll() then break end
 end
