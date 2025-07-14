@@ -34,10 +34,10 @@ local Colors = {
 }
 
 -- Print Initial Start-Up Greeting
-Messages.Print("_________________________________________", Colors.Info)
+Messages.Print("____________________________________", Colors.Info)
 Messages.Print("Welcome to the ((Insert Name)) Assistant Script!", Colors.Info)
 Messages.Print("Booting up... Initializing systems... ", Colors.Info)
-Messages.Print("________________________________________", Colors.Info)
+Messages.Print("___________________________________", Colors.Info)
 
 -- User Settings (Feel free to edit this section as needed)
 local Config = {
