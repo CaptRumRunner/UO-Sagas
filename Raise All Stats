@@ -1,6 +1,9 @@
 --[[ 
 --------------------------------------------------------------------
-Raise All Stats Assistant Script v0.1.0
+Stat Trainer Assistant Script
+--------------------------------------------------------------------
+Version History:
+v0.1.0 - Initial release
 --------------------------------------------------------------------
 Script created by: 
   ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
@@ -11,25 +14,25 @@ Script created by:
 --------------------------------------------------------------------
 This script is designed to be used within the UO Sagas environment.
 --------------------------------------------------------------------
-Script Notes:
+Script Description: 
 
-1) Only one train one stat at a time or script will end as the script
-uses a different skill for each stat.
-
-2) Script uses Hiding, Eval Int and Arms Lore. Those skills can be locked 
-and your stats will still go up! If you dont need hiding, keep it locked, it
-will stay at 0.0 and stat gains will still be possible.
-
-3) To get started, scroll down to the Config section, set the stat you
-want to raise to "True" and update the goal. If you want to train the stat
-to 100, then put 100 in the goal section or what ever your target is.
-
-4) Once that stat is complete, come back, reedit the script, hit save and
-start to run it again for your next stat. Rinse repeat until your char
-stats are done. Set them all to locked and you are done!  
-  
+This script will raise all 3 stats until it reaches your set goal!
 --------------------------------------------------------------------
-
+Script Notes:
+1) Train only one stat at a time. If multiple stats are set to `true`, the script will exit.
+2) Skills used:
+   - Dexterity: Hiding
+   - Intelligence: Evaluating Intelligence
+   - Strength: Arms Lore
+3) To start:
+   - Set the desired stat to `true` in the Config section.
+   - Update the `Goal` value to your target stat level.
+4) If you dont want that skill, keep it locked so it doesnt gain. 
+Even if that skill is 0.0 and locked, the stat will still rise.
+5) Once the stat is complete:
+   - Edit the script to train the next stat.
+   - Save and restart the script.
+--------------------------------------------------------------------
 ]]
 
 -- Define Color Scheme
@@ -51,9 +54,9 @@ Messages.Print("________________________________________", Colors.Info)
 
 -- User Settings (Feel free to edit this section as needed)
 local Config = {
-    Dex = True,       -- Type "True" to raise otherwise type "False"
-    Int = False,      -- Only one train one stat at a time or script will end
-    Str = False,      -- 
+    Dex = true,       -- Type "True" to raise otherwise type "False"
+    Int = false,      -- Only one train one stat at a time or script will end
+    Str = false,      -- 
     Goal = 80         -- Update this so your target stat is reached and script will end 
 }
 
@@ -74,12 +77,13 @@ local function ValidateConfig()
     return true
 end
 
--- Functions to raise stats
+-- Raise Dexiterity
 local function RaiseDex()
     Skills.Use('Hiding')
     Pause(10000)
 end
 
+-- Raise Intelligence
 local function RaiseInt()
     Skills.Use('Evaluating Intelligence')
     if Targeting.WaitForTarget(1000) then
@@ -88,21 +92,84 @@ local function RaiseInt()
     Pause(1000)
 end
 
+-- Raise Strength
 local function RaiseStr()
+    -- Function to find valid items (weapons/armor) in the backpack
+    local function GetValidItems()
+        -- Create a filter to find items strictly inside the player's backpack
+        local items = Items.FindByFilter({ RootContainer = Player.Backpack.Serial })
+        local validItems = {}
+
+        -- Check if no items were found in the backpack
+        if not items or #items == 0 then
+            Messages.Overhead("No items found in backpack!", Colors.Alert, Player.Serial)
+            return validItems
+        end
+
+        -- Iterate through each item in the backpack
+        for _, item in ipairs(items) do
+            -- Log details of the item being checked
+            Messages.Overhead(
+                "Checking item: Serial = " .. item.Serial ..
+                ", Name = " .. (item.Name or "Unknown") ..
+                ", Graphic = 0x" .. string.format("%04X", item.Graphic) ..
+                ", Properties = " .. (item.Properties or "None"),
+                Colors.Info, Player.Serial
+            )
+
+            -- Check if the item's properties indicate it's a weapon or armor
+            local properties = item.Properties or ""
+            if properties:match("weapon") or properties:match("armor") then
+                -- Log selected valid item
+                Messages.Overhead(
+                    "Selected item: Serial = " .. item.Serial ..
+                    ", Name = " .. (item.Name or "Unknown") ..
+                    ", Graphic = 0x" .. string.format("%04X", item.Graphic),
+                    Colors.Action, Player.Serial
+                )
+                table.insert(validItems, item)
+            else
+                -- Log why the item was excluded
+                Messages.Overhead(
+                    "Excluded item: Properties = " .. properties ..
+                    ", Serial = " .. tostring(item.Serial),
+                    Colors.Warning, Player.Serial
+                )
+            end
+        end
+
+        -- Log if no valid items were found after filtering
+        if #validItems == 0 then
+            Messages.Overhead("No valid weapons or armor found in backpack!", Colors.Alert, Player.Serial)
+        end
+
+        return validItems
+    end
+
+    -- Get valid items from the backpack
+    local validItems = GetValidItems()
+
+    -- If no valid items are found, exit the function
+    if #validItems == 0 then
+        return
+    end
+
+    -- Use Arms Lore on the first valid item found
+    local targetItem = validItems[1]
+    Messages.Overhead("Using Arms Lore on: " .. (targetItem.Name or "Unknown"), Colors.Action, Player.Serial)
     Skills.Use('Arms Lore')
     if Targeting.WaitForTarget(1000) then
-        Targeting.Target(1119308582)  -- Replace with the correct target Serial if needed
+        Targeting.Target(targetItem.Serial)
     end
     Pause(1000)
 end
 
--- Main Loop
+-- Error Checking
 if not ValidateConfig() then
     return -- Exit script if configuration is invalid
 end
 
-Messages.Print("All skills are locked. Starting stat training...", Colors.Status)
-
+-- Main Loop
 while true do
     if Config.Dex then
         Messages.Print("Training Dexterity...", Colors.Action)
