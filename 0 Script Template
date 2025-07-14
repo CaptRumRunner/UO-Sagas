@@ -26,13 +26,14 @@ local Colors = {
 }
 
 -- Print Initial Start-Up Greeting
-Messages.Print("___________________________________", Colors.Info)
-Messages.Print("Rum Runner Assistant Script Running", Colors.Info)
-Messages.Print("___________________________________", Colors.Info)
+Messages.Print("_________________________________________", Colors.Info)
+Messages.Print("Welcome to a Rum Runner Assistant Script!", Colors.Info)
+Messages.Print("Booting up... Initializing systems... ", Colors.Info)
+Messages.Print("________________________________________", Colors.Info)
 
--- User Settings
+-- User Settings (Feel free to edit this section as needed)
 local Config = {
-    setting = nil,      -- Edit as needed
+    setting = nil,      -- Edit
 }
 
 ------------- Main script is below, do not make changes below this line -------------
