@@ -14,7 +14,8 @@ Script created by:
 --------------------------------------------------------------------
 This script is designed to be used within the UO Sagas environment.
 --------------------------------------------------------------------
-Script Description: Dynamically crafts Recall, level 7, or level 8 spells.
+Script Description: 
+Dynamically crafts Recall, level 7, or level 8 spells.
 --------------------------------------------------------------------
 Script Notes:
 1) Ensure you have a Scribe's Pen, blank scrolls and regs in your backpack.
