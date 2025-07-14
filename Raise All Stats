@@ -1,0 +1,131 @@
+--[[ 
+--------------------------------------------------------------------
+Raise All Stats Assistant Script v0.1.0
+--------------------------------------------------------------------
+Script created by: 
+  ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
+ | _ \ | | | | |  \/  |   | _ \ | | | | | \ | | | \ | | |  __| | _ \
+ |   / | |_| | | |\/| |   |   / | |_| | |  \| | |  \| | |  _|  |   /
+ |_|_\  \___/  |_|  |_|   |_|_\  \___/  |_|\__| |_|\__| |____| |_|_\
+
+--------------------------------------------------------------------
+This script is designed to be used within the UO Sagas environment.
+--------------------------------------------------------------------
+Script Notes:
+
+1) Only one train one stat at a time or script will end as the script
+uses a different skill for each stat.
+
+2) Script uses Hiding, Eval Int and Arms Lore. Those skills can be locked 
+and your stats will still go up! If you dont need hiding, keep it locked, it
+will stay at 0.0 and stat gains will still be possible.
+
+3) To get started, scroll down to the Config section, set the stat you
+want to raise to "True" and update the goal. If you want to train the stat
+to 100, then put 100 in the goal section or what ever your target is.
+
+4) Once that stat is complete, come back, reedit the script, hit save and
+start to run it again for your next stat. Rinse repeat until your char
+stats are done. Set them all to locked and you are done!  
+  
+--------------------------------------------------------------------
+
+]]
+
+-- Define Color Scheme
+local Colors = {
+    Alert   = 33,       -- Red
+    Warning = 48,       -- Orange
+    Caution = 53,       -- Yellow
+    Action  = 67,       -- Green
+    Confirm = 73,       -- Light Green
+    Info    = 84,       -- Light Blue
+    Status  = 93        -- Blue
+}
+
+-- Print Initial Start-Up Greeting
+Messages.Print("_________________________________________", Colors.Info)
+Messages.Print("Welcome to a Rum Runner Assistant Script!", Colors.Info)
+Messages.Print("Booting up... Initializing systems... ", Colors.Info)
+Messages.Print("________________________________________", Colors.Info)
+
+-- User Settings (Feel free to edit this section as needed)
+local Config = {
+    Dex = True,       -- Type "True" to raise otherwise type "False"
+    Int = False,      -- Only one train one stat at a time or script will end
+    Str = False,      -- 
+    Goal = 80         -- Update this so your target stat is reached and script will end 
+}
+
+------------- Main script is below, do not make changes below this line -------------
+
+-- Function to check configuration validity
+local function ValidateConfig()
+    local trueCount = 0
+    if Config.Dex then trueCount = trueCount + 1 end
+    if Config.Int then trueCount = trueCount + 1 end
+    if Config.Str then trueCount = trueCount + 1 end
+
+    if trueCount ~= 1 then
+        Messages.Overhead("Error: Only one stat can be raised at a time!", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    return true
+end
+
+-- Functions to raise stats
+local function RaiseDex()
+    Skills.Use('Hiding')
+    Pause(10000)
+end
+
+local function RaiseInt()
+    Skills.Use('Evaluating Intelligence')
+    if Targeting.WaitForTarget(1000) then
+        Targeting.TargetSelf()
+    end
+    Pause(1000)
+end
+
+local function RaiseStr()
+    Skills.Use('Arms Lore')
+    if Targeting.WaitForTarget(1000) then
+        Targeting.Target(1119308582)  -- Replace with the correct target Serial if needed
+    end
+    Pause(1000)
+end
+
+-- Main Loop
+if not ValidateConfig() then
+    return -- Exit script if configuration is invalid
+end
+
+Messages.Print("All skills are locked. Starting stat training...", Colors.Status)
+
+while true do
+    if Config.Dex then
+        Messages.Print("Training Dexterity...", Colors.Action)
+        while Player.Dexterity < Config.Goal do
+            RaiseDex()
+        end
+        Messages.Print("Dexterity training complete!", Colors.Confirm)
+        break
+    elseif Config.Int then
+        Messages.Print("Training Intelligence...", Colors.Action)
+        while Player.Intelligence < Config.Goal do
+            RaiseInt()
+        end
+        Messages.Print("Intelligence training complete!", Colors.Confirm)
+        break
+    elseif Config.Str then
+        Messages.Print("Training Strength...", Colors.Action)
+        while Player.Strength < Config.Goal do
+            RaiseStr()
+        end
+        Messages.Print("Strength training complete!", Colors.Confirm)
+        break
+    end
+
+    Pause(150)
+end
