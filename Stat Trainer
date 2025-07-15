@@ -39,16 +39,18 @@ local Colors = {
 }
 
 -- Print Initial Start-Up Greeting
-Messages.Print("_________________________________________", Colors.Info)
+Messages.Print("__________________________________", Colors.Info)
 Messages.Print("Welcome to the Stat Trainer Assistant Script!", Colors.Info)
 Messages.Print("Booting up... Initializing systems... ", Colors.Info)
-Messages.Print("_________________________________________", Colors.Info)
+Messages.Print("__________________________________", Colors.Info)
 
 -- User Settings
 local Config = {
     Goal = 100,          -- Default goal for stat training
     SelectedStat = nil   -- Selected stat to train (Strength, Dexterity, Intelligence)
 }
+
+------------- Main script is below, do not make changes below this line -------------
 
 -- UI Window Setup
 local window = UI.CreateWindow('statTrainer', 'Stat Trainer Assistant')
@@ -126,7 +128,7 @@ local function TrainStrength()
 
     -- Use Arms Lore on the first valid item found
     local targetItem = validItems[1]
-    Messages.Overhead("Using Arms Lore on: " .. (targetItem.Name or "Unknown"), Colors.Action, Player.Serial)
+    Messages.Overhead("Using Arms Lore on: " .. (targetItem.Name or "Unknown"), Colors.Action, targetItem.Serial)
     Skills.Use('Arms Lore')
     if Targeting.WaitForTarget(1000) then
         Targeting.Target(targetItem.Serial)
@@ -141,8 +143,28 @@ local function TrainDexterity()
 end
 
 local function TrainIntelligence()
-    Skills.Use('Camping')
+    -- Find the closest friendly mobile
+    local mobiles = Mobiles.FindByFilter({
+        rangemax = 10, -- Search within 10 tiles
+        notorieties = {1, 2} -- Innocent or Ally
+    })
+
+    if #mobiles == 0 then
+        Messages.Overhead("No friendly mobiles found nearby! Please move closer to allies.", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    -- Target the closest mobile
+    table.sort(mobiles, function(a, b) return a.Distance < b.Distance end)
+    local closestMobile = mobiles[1]
+
+    Messages.Overhead("Using Evaluating Intelligence on: " .. (closestMobile.Name or "Unknown"), Colors.Action, closestMobile.Serial)
+    Skills.Use('Evaluating Intelligence')
+    if Targeting.WaitForTarget(1000) then
+        Targeting.Target(closestMobile.Serial)
+    end
     Pause(1000)
+    return true
 end
 
 -- Main Training Loop
