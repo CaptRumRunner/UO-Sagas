@@ -63,7 +63,7 @@ local Config = {
 -- UI Window Setup
 local window = UI.CreateWindow('statTrainer', 'Rum Runners UI Assistant')
 window:SetPosition(50, 75)
-window:SetSize(250, 300)
+window:SetSize(250, 350)
 window:SetResizable(false)
 
 -- Add title
@@ -97,7 +97,7 @@ detailLabel:SetColor(0.8, 0.8, 0.8, 1)
 
 
 -- Stop button
-local stopButton = window:AddButton(10, 240, 'Stop Training', 140, 30)
+local stopButton = window:AddButton(10, 280, 'Stop Training', 140, 30)
 stopButton:SetOnClick(function()
     Config.Active = false
     Config.SelectedStat = nil
