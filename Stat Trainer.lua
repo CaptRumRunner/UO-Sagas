@@ -61,13 +61,13 @@ local Config = {
 
 
 -- UI Window Setup
-local window = UI.CreateWindow('statTrainer', 'Rum Runners UI Assistant')
+local window = UI.CreateWindow('statTrainer', 'Rum Runners Stat Trainer v0.1.0')
 window:SetPosition(50, 75)
-window:SetSize(250, 350)
+window:SetSize(270, 340)
 window:SetResizable(false)
 
 -- Add title
-window:AddLabel(10, 20, 'Stat Trainer'):SetColor(0.2, 0.8, 1, 1)
+window:AddLabel(10, 20, 'Settings'):SetColor(0.2, 0.8, 1, 1)
 
 -- Stat selection buttons
 local strButton = window:AddButton(10, 50, 'Start Training Strength', 200, 30)
