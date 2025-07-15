@@ -1,0 +1,161 @@
+--[[ 
+--------------------------------------------------------------------
+Stat Trainer Assistant Script with UI
+--------------------------------------------------------------------
+Version History:
+v0.1.0 - Initial release
+--------------------------------------------------------------------
+Script created by: 
+  ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
+ | _ \ | | | | |  \/  |   | _ \ | | | | | \ | | | \ | | |  __| | _ \
+ |   / | |_| | | |\/| |   |   / | |_| | |  \| | |  \| | |  _|  |   /
+ |_|_\  \___/  |_|  |_|   |_|_\  \___/  |_|\__| |_|\__| |____| |_|_\
+
+--------------------------------------------------------------------
+This script is designed to be used within the UO Sagas environment.
+--------------------------------------------------------------------
+Script Description: 
+Dynamically trains Strength, Dexterity, or Intelligence based on user input.
+--------------------------------------------------------------------
+Script Notes:
+1) Ensure you have the required skills LOCKED for stat training unless
+you want those skills to go up. 
+2) Use the UI window to select the stat to train and input the goal.
+3) The script dynamically adjusts based on user input.
+4) For Strength training, ensure you have weapons or armor in your backpack.
+5) Once one stat is done, simply rinse repeat on your next stat.
+--------------------------------------------------------------------
+]]
+
+-- Define Color Scheme
+local Colors = {
+    Alert   = 33,       -- Red
+    Warning = 48,       -- Orange
+    Caution = 53,       -- Yellow
+    Action  = 67,       -- Green
+    Confirm = 73,       -- Light Green
+    Info    = 84,       -- Light Blue
+    Status  = 93        -- Blue
+}
+
+-- Print Initial Start-Up Greeting
+Messages.Print("_________________________________________", Colors.Info)
+Messages.Print("Welcome to the Stat Trainer Assistant Script!", Colors.Info)
+Messages.Print("Booting up... Initializing systems... ", Colors.Info)
+Messages.Print("_________________________________________", Colors.Info)
+
+-- User Settings
+local Config = {
+    Goal = 100,          -- Default goal for stat training
+    SelectedStat = nil   -- Selected stat to train (Strength, Dexterity, Intelligence)
+}
+
+-- UI Window Setup
+local window = UI.CreateWindow('statTrainer', 'Stat Trainer Assistant')
+if window then
+    window:SetPosition(200, 200)
+    window:SetSize(400, 300)
+    window:SetResizable(false)
+
+    -- Add title
+    window:AddLabel(10, 10, 'Stat Trainer Assistant'):SetColor(0.2, 0.8, 1, 1)
+
+    -- Add stat selection buttons
+    local strButton = window:AddButton(10, 40, 'Train Strength', 120, 30)
+    local dexButton = window:AddButton(10, 80, 'Train Dexterity', 120, 30)
+    local intButton = window:AddButton(10, 120, 'Train Intelligence', 120, 30)
+
+    -- Add text box for goal input
+    local goalTextBox = window:AddTextBox(10, 160, 200, tostring(Config.Goal))
+    goalTextBox:SetOnTextChanged(function(newText)
+        local goal = tonumber(newText)
+        if goal and goal > 0 then
+            Config.Goal = goal
+            Messages.Print("Goal updated to: " .. goal)
+        else
+            Messages.Print("Invalid goal entered. Please enter a positive number.")
+        end
+    end)
+
+    -- Add status label
+    local statusLabel = window:AddLabel(10, 200, 'Status: Ready')
+    statusLabel:SetColor(1, 1, 1, 1)
+
+    -- Set up button event handlers
+    strButton:SetOnClick(function()
+        Config.SelectedStat = 'Strength'
+        statusLabel:SetText('Status: Training Strength')
+        statusLabel:SetColor(0, 1, 0, 1) -- Green
+        Messages.Print("Selected stat: Strength")
+    end)
+
+    dexButton:SetOnClick(function()
+        Config.SelectedStat = 'Dexterity'
+        statusLabel:SetText('Status: Training Dexterity')
+        statusLabel:SetColor(0, 1, 0, 1) -- Green
+        Messages.Print("Selected stat: Dexterity")
+    end)
+
+    intButton:SetOnClick(function()
+        Config.SelectedStat = 'Intelligence'
+        statusLabel:SetText('Status: Training Intelligence')
+        statusLabel:SetColor(0, 1, 0, 1) -- Green
+        Messages.Print("Selected stat: Intelligence")
+    end)
+
+    -- Window is visible by default
+    Messages.Print("Stat Trainer Assistant UI initialized!")
+end
+
+-- Helper Functions
+local function TrainStrength()
+    -- Find weapons or armor in the backpack
+    local items = Items.FindByFilter({ RootContainer = Player.Serial })
+    local validItems = {}
+
+    for _, item in ipairs(items) do
+        if item.Properties and (item.Properties:match("weapon") or item.Properties:match("armor")) then
+            table.insert(validItems, item)
+        end
+    end
+
+    if #validItems == 0 then
+        Messages.Overhead("No weapons or armor found in backpack! Please add some items.", Colors.Alert, Player.Serial)
+        return false
+    end
+
+    -- Use Arms Lore on the first valid item found
+    local targetItem = validItems[1]
+    Messages.Overhead("Using Arms Lore on: " .. (targetItem.Name or "Unknown"), Colors.Action, Player.Serial)
+    Skills.Use('Arms Lore')
+    if Targeting.WaitForTarget(1000) then
+        Targeting.Target(targetItem.Serial)
+    end
+    Pause(1000)
+    return true
+end
+
+local function TrainDexterity()
+    Skills.Use('Hiding')
+    Pause(1000)
+end
+
+local function TrainIntelligence()
+    Skills.Use('Camping')
+    Pause(1000)
+end
+
+-- Main Training Loop
+while true do
+    if Config.SelectedStat == 'Strength' and Player.Str < Config.Goal then
+        TrainStrength()
+    elseif Config.SelectedStat == 'Dexterity' and Player.Dex < Config.Goal then
+        TrainDexterity()
+    elseif Config.SelectedStat == 'Intelligence' and Player.Int < Config.Goal then
+        TrainIntelligence()
+    else
+        Messages.Overhead("Training complete or no stat selected.", Colors.Confirm, Player.Serial)
+        break
+    end
+    Pause(50) -- Allow UI updates
+end
