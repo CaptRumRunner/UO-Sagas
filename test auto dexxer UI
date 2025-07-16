@@ -1,0 +1,281 @@
+--[[ 
+--------------------------------------------------------------------
+Auto Dexxer Assistant Script
+--------------------------------------------------------------------
+Version History:
+v0.7.0 - Added Heal Ally Button for Manual Healing
+--------------------------------------------------------------------
+Script created by: 
+  ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
+ | _ \ | | | | |  \/  |   | _ \ | | | | | \ | | | \ | | |  __| | _ \
+ |   / | |_| | | |\/| |   |   / | |_| | |  \| | |  \| | |  _|  |   /
+ |_|_\  \___/  |_|  |_|   |_|_\  \___/  |_|\__| |_|\__| |____| |_|_\
+
+--------------------------------------------------------------------
+This script is designed to be used within the UO Sagas environment.
+--------------------------------------------------------------------
+Script Description: 
+Provides automated features for Dexxers, including weight checking,
+auto-cure poison, scavenger mode, hostile mob detection, gear checking,
+and manual healing of allies.
+--------------------------------------------------------------------
+Script Notes:
+1) Use the UI to toggle features and set thresholds.
+2) Features include:
+   - Weight Checker
+   - Auto Bandage
+   - Auto Cure Poison
+   - Hostile Mob Detection
+   - Scavenger Mode
+   - Important Gear Checker
+   - Heal Ally Button
+--------------------------------------------------------------------
+]]
+
+-- Define Color Scheme
+local Colors = {
+    Alert   = 33,       -- Red
+    Warning = 48,       -- Orange
+    Caution = 53,       -- Yellow
+    Action  = 67,       -- Green
+    Confirm = 73,       -- Light Green
+    Info    = 84        -- Light Blue
+}
+
+-- Print Initial Start-Up Greeting
+Messages.Print("___________________________________", Colors.Info)
+Messages.Print("Welcome to the Auto Dexxer Assistant Script!", Colors.Info)
+Messages.Print("Booting up... Initializing systems... ", Colors.Info)
+Messages.Print("___________________________________", Colors.Info)
+
+-- User Settings
+local Config = {
+    WeightBuffer = 20,          -- Default weight threshold
+    AutoWeightCheck = true,     -- Toggle weight checking
+    AutoBandage = true,         -- Toggle auto bandaging
+    AutoBandageThreshold = 99,  -- Default health percentage for auto bandaging
+    AutoCure = true,            -- Toggle auto cure poison
+    HostileMobDetection = true, -- Toggle hostile mob detection
+    ScavengerMode = true,       -- Toggle scavenger mode
+    CheckBandages = true,       -- Toggle bandage presence check
+    CheckCurePotions = true,    -- Toggle cure potion presence check
+    CheckPoisonPotions = true,  -- Toggle poison potion presence check
+}
+
+-- Define Important Items to Track
+local ImportantGear = {
+    Bandage = 0x0E21,       -- Bandages
+    CurePotion = 0x0F0E,    -- Cure Potions
+    PoisonPotion = 0x0F0A   -- Poison Potions
+}
+
+-- UI Window Setup
+local window = UI.CreateWindow('autoDexxer', 'Auto Dexxer Assistant')
+window:SetPosition(50, 75)
+window:SetSize(300, 550)
+window:SetResizable(false)
+
+-- Add title
+window:AddLabel(10, 10, 'Auto Dexxer Assistant'):SetColor(0.2, 0.8, 1, 1)
+
+-- Add checkboxes for toggling features
+local weightCheckBox = window:AddCheckbox(10, 40, 'Enable Weight Checker', Config.AutoWeightCheck)
+weightCheckBox:SetOnCheckedChanged(function(isChecked)
+    Config.AutoWeightCheck = isChecked
+    Messages.Print("Weight Checker " .. (isChecked and "enabled" or "disabled"))
+end)
+
+local bandageCheckBox = window:AddCheckbox(10, 70, 'Enable Auto Bandage', Config.AutoBandage)
+bandageCheckBox:SetOnCheckedChanged(function(isChecked)
+    Config.AutoBandage = isChecked
+    Messages.Print("Auto Bandage " .. (isChecked and "enabled" or "disabled"))
+end)
+
+local cureCheckBox = window:AddCheckbox(10, 100, 'Enable Auto Cure Poison', Config.AutoCure)
+cureCheckBox:SetOnCheckedChanged(function(isChecked)
+    Config.AutoCure = isChecked
+    Messages.Print("Auto Cure Poison " .. (isChecked and "enabled" or "disabled"))
+end)
+
+local hostileCheckBox = window:AddCheckbox(10, 130, 'Enable Hostile Mob Detection', Config.HostileMobDetection)
+hostileCheckBox:SetOnCheckedChanged(function(isChecked)
+    Config.HostileMobDetection = isChecked
+    Messages.Print("Hostile Mob Detection " .. (isChecked and "enabled" or "disabled"))
+end)
+
+local scavengerCheckBox = window:AddCheckbox(10, 160, 'Enable Scavenger Mode', Config.ScavengerMode)
+scavengerCheckBox:SetOnCheckedChanged(function(isChecked)
+    Config.ScavengerMode = isChecked
+    Messages.Print("Scavenger Mode " .. (isChecked and "enabled" or "disabled"))
+end)
+
+-- Add text box for weight threshold
+window:AddLabel(10, 200, 'Weight Threshold:'):SetColor(1, 1, 1, 1)
+local weightTextBox = window:AddTextBox(150, 195, 50, tostring(Config.WeightBuffer))
+weightTextBox:SetOnTextChanged(function(newText)
+    local weight = tonumber(newText)
+    if weight and weight > 0 then
+        Config.WeightBuffer = weight
+        Messages.Print("Weight Threshold updated to: " .. weight)
+    else
+        Messages.Print("Invalid weight threshold entered. Please enter a positive number.")
+    end
+end)
+
+-- Add text box for auto bandage threshold
+window:AddLabel(10, 240, 'Bandage Threshold (%):'):SetColor(1, 1, 1, 1)
+local bandageTextBox = window:AddTextBox(150, 235, 50, tostring(Config.AutoBandageThreshold))
+bandageTextBox:SetOnTextChanged(function(newText)
+    local threshold = tonumber(newText)
+    if threshold and threshold >= 0 and threshold <= 100 then
+        Config.AutoBandageThreshold = threshold
+        Messages.Print("Bandage Threshold updated to: " .. threshold .. "%")
+    else
+        Messages.Print("Invalid bandage threshold entered. Please enter a number between 0 and 100.")
+    end
+end)
+
+-- Status label (Main)
+local statusLabel = window:AddLabel(10, 280, 'Status: Ready')
+statusLabel:SetColor(1, 1, 1, 1)
+
+-- Status label (Details)
+local detailLabel = window:AddLabel(10, 300, 'Action: Idle')
+detailLabel:SetColor(0.8, 0.8, 0.8, 1)
+
+-- Add Heal Ally Button
+local healButton = window:AddButton(10, 340, 'Heal Ally', 140, 30)
+healButton:SetOnClick(function()
+    local Bandage = Items.FindByType(ImportantGear.Bandage, Player.Backpack)
+    if Bandage then
+        Player.UseObject(Bandage.Serial)
+        if Targeting.WaitForTarget(1000) then
+            local targetSerial = Targeting.GetNewTarget()
+            if targetSerial then
+                Targeting.Target(targetSerial)
+                Messages.Overhead("Healing Ally!", Colors.Action, targetSerial)
+                detailLabel:SetText("Action: Healing Ally")
+            else
+                Messages.Print("No target selected for healing.")
+                detailLabel:SetText("Action: No target selected")
+            end
+        end
+    else
+        Messages.Print("No bandages found for healing.")
+        detailLabel:SetText("Action: No bandages found")
+    end
+end)
+
+-- Helper Functions
+local function UpdateStatus(mainStatus, detailStatus)
+    statusLabel:SetText("Status: " .. mainStatus)
+    detailLabel:SetText("Action: " .. detailStatus)
+end
+
+local function CheckImportantGear()
+    UpdateStatus("Checking Gear", "Scanning for important items...")
+    if Config.CheckBandages then
+        local Bandage = Items.FindByType(ImportantGear.Bandage, Player.Backpack)
+        if not Bandage then
+            Messages.Overhead("No Bandages Found!", Colors.Alert, Player.Serial)
+        end
+    end
+
+    if Config.CheckCurePotions then
+        local CurePotion = Items.FindByType(ImportantGear.CurePotion, Player.Backpack)
+        if not CurePotion then
+            Messages.Overhead("No Cure Potions Found!", Colors.Alert, Player.Serial)
+        end
+    end
+
+    if Config.CheckPoisonPotions then
+        local PoisonPotion = Items.FindByType(ImportantGear.PoisonPotion, Player.Backpack)
+        if not PoisonPotion then
+            Messages.Overhead("No Poison Potions Found!", Colors.Alert, Player.Serial)
+        end
+    end
+    UpdateStatus("Ready", "Idle")
+end
+
+local function CheckWeight()
+    UpdateStatus("Checking Weight", "Evaluating character weight...")
+    if Config.AutoWeightCheck then
+        local SafeCharWeight = Player.MaxWeight - Config.WeightBuffer
+        if Player.Weight >= SafeCharWeight + Config.WeightBuffer then
+            Messages.Overhead("Overweight!!", Colors.Alert, Player.Serial)
+        elseif Player.Weight >= SafeCharWeight then
+            Messages.Overhead("Nearly Overweight!", Colors.Warning, Player.Serial)
+        end
+    end
+    UpdateStatus("Ready", "Idle")
+end
+
+local function AutoBandage()
+    UpdateStatus("Auto Bandaging", "Checking health...")
+    if Config.AutoBandage and Player.Hits < (Player.HitsMax * Config.AutoBandageThreshold / 100) then
+        local Bandage = Items.FindByType(ImportantGear.Bandage, Player.Backpack)
+        if Bandage then
+            Player.UseObject(Bandage.Serial)
+            if Targeting.WaitForTarget(1000) then
+                Targeting.TargetSelf()
+                Messages.Overhead("Bandaging", Colors.Action, Player.Serial)
+            else
+                Messages.Overhead("Failed to bandage", Colors.Alert, Player.Serial)
+            end
+        else
+            Messages.Overhead("No bandages found!", Colors.Alert, Player.Serial)
+        end
+    end
+    UpdateStatus("Ready", "Idle")
+end
+
+local function AutoCure()
+    UpdateStatus("Auto Curing", "Checking for poison...")
+    if Config.AutoCure and Journal.Contains("You feel a bit nauseous") then
+        local CurePotion = Items.FindByType(ImportantGear.CurePotion, Player.Backpack)
+        if CurePotion then
+            Player.UseObject(CurePotion.Serial)
+            Messages.Overhead("Curing Poison", Colors.Action, Player.Serial)
+        else
+            Messages.Overhead("No Cure Potion Found!", Colors.Alert, Player.Serial)
+        end
+    end
+    UpdateStatus("Ready", "Idle")
+end
+
+local function CheckHostileMobs()
+    UpdateStatus("Scanning for Hostiles", "Searching nearby mobs...")
+    if Config.HostileMobDetection then
+        local mobs = Mobiles.FindByFilter({range = 12, notoriety = 5, dead = false, human = false})
+        for _, mob in ipairs(mobs) do
+            if not AnimalNamesToIgnore[mob.Name:lower()] then
+                Messages.Overhead("Hostile!", Colors.Alert, mob.Serial)
+            end
+        end
+    end
+    UpdateStatus("Ready", "Idle")
+end
+
+local function Scavenger()
+    UpdateStatus("Scavenging", "Searching for items...")
+    if Config.ScavengerMode then
+        local filter = {onground = true, rangemax = 2, graphics = ItemsToSearchFor}
+        local items = Items.FindByFilter(filter)
+        for _, item in ipairs(items) do
+            Player.PickUp(item.Serial, 1000)
+            Player.DropInBackpack()
+        end
+    end
+    UpdateStatus("Ready", "Idle")
+end
+
+-- Main Loop
+while true do
+    CheckImportantGear()
+    CheckWeight()
+    AutoBandage()
+    AutoCure()
+    CheckHostileMobs()
+    Scavenger()
+    Pause(150)
+end
