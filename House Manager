@@ -137,7 +137,8 @@ if window then
     lockdownButton:SetOnClick(LockDownItem)
     trashButton:SetOnClick(PlaceTrashBarrel)
     banButton:SetOnClick(BanPlayer)
-end
+
+end
 
 -- Main Loop
 while true do
