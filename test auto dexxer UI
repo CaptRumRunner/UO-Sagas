@@ -40,6 +40,7 @@ local Colors = {
     Action  = 67,       -- Green
     Confirm = 73,       -- Light Green
     Info    = 84        -- Light Blue
+    Status  = 93		    -- Blue
 }
 
 -- Print Initial Start-Up Greeting
@@ -50,24 +51,54 @@ Messages.Print("___________________________________", Colors.Info)
 
 -- User Settings
 local Config = {
-    WeightBuffer = 20,          -- Default weight threshold
-    AutoWeightCheck = true,     -- Toggle weight checking
-    AutoBandage = true,         -- Toggle auto bandaging
-    AutoBandageThreshold = 99,  -- Default health percentage for auto bandaging
-    AutoCure = true,            -- Toggle auto cure poison
-    HostileMobDetection = true, -- Toggle hostile mob detection
-    ScavengerMode = true,       -- Toggle scavenger mode
-    CheckBandages = true,       -- Toggle bandage presence check
-    CheckCurePotions = true,    -- Toggle cure potion presence check
-    CheckPoisonPotions = true,  -- Toggle poison potion presence check
+    WeightBuffer           = 20,          -- Default weight threshold
+    AutoWeightCheck        = true,        -- Toggle weight checking
+    AutoBandage            = true,        -- Toggle auto bandaging
+    AutoBandageThreshold   = 99,          -- Default health percentage for auto bandaging
+    AutoCure               = true,        -- Toggle auto cure poison
+    HostileMobDetection    = true,        -- Toggle hostile mob detection
+    ScavengerMode          = true,        -- Toggle scavenger mode
+    CheckBandages          = true,        -- Toggle bandage presence check
+    CheckCurePotions       = true,        -- Toggle cure potion presence check
+    CheckPoisonPotions     = true,        -- Toggle poison potion presence check
 }
 
 -- Define Important Items to Track
 local ImportantGear = {
-    Bandage = 0x0E21,       -- Bandages
-    CurePotion = 0x0F0E,    -- Cure Potions
-    PoisonPotion = 0x0F0A   -- Poison Potions
+    Bandage      = 0x0E21,       -- Bandages
+    CurePotion   = 0x0F0E,       -- Cure Potions
+    PoisonPotion = 0x0F0A        -- Poison Potions
 }
+
+-- Items to Scavenge (Add "--" in front of anything you want to turn off)
+local ItemsToSearchFor = {
+        0x0f7a, -- Black Pearl
+        0x0f7b, -- Blood Moss
+        0x0f86, -- Mandrake Root
+        0x0f84, -- Garlic
+        0x0f85, -- Ginseng
+        0x0f88, -- Nightshade
+        0x0f8d, -- Spider's Silk
+        0x0f8c, -- Sulphurous Ash
+        0x0F3F, -- Arrow
+        0x1BFB, -- Crossbolt
+        0x0E21, -- Bandage
+        0x0F0E, -- Empty Bottle
+       }
+
+-- Feel free to add animal names here and notify author. Follow same convention as shown
+local AnimalNamesToIgnore = {
+    ["a deer"] = true, ["a horse"] = true, ["a cow"] = true, ["a dog"] = true, ["a sheep"] = true,
+    ["a cat"] = true, ["a goat"] = true, ["a pig"] = true, ["a magpie"] = true, ["a chicken"] = true,
+    ["a tropical bird"] = true, ["a squirrel"] = true, ["a warbler"] = true, ["a swallow"] = true,
+    ["a woodpecker"] = true, ["a finch"] = true, ["a thrush"] = true, ["an eagle"] = true, ["a rat"] = true,
+    ["a gorilla"] = true, ["a raven"] = true, ["a crow"] = true, ["a rabbit"] = true, ["a black bear"] = true,
+    ["a hind"] = true, ["a great hart"] = true, ["a grizzly bear"] = true, ["a brown bear"] = true,
+    ["a pack horse"] = true, ["a kingfisher"] = true, ["a lapwing"] = true, ["a timber wolf"] = true,
+    ["a wren"] = true, ["a sparrow"] = true,["a nuthatch"] = true,
+}
+
+------------------------- Main script is below, do not make changes below this line -------------------------
 
 -- UI Window Setup
 local window = UI.CreateWindow('autoDexxer', 'Auto Dexxer Assistant')
