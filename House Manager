@@ -3,7 +3,7 @@
 House Manager Script with UI
 --------------------------------------------------------------------
 Version History:
-v0.1.0 - Initial release
+v1.0.0 - Initial release
 --------------------------------------------------------------------
 Script created by: 
   ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
@@ -16,7 +16,7 @@ This script is designed to be used within the UO Sagas environment.
 --------------------------------------------------------------------
 Script Description: 
 Provides a UI for managing house-related tasks such as securing items,
-releasing items, locking down items, placing a trash barrel, and banning players.
+releasing items, locking down items, placing trash barrel, and banning.
 --------------------------------------------------------------------
 Script Notes:
 1) Ensure you are inside your house to use this script effectively.
@@ -44,7 +44,7 @@ Messages.Print("__________________________________", Colors.Info)
 ------------- Main script is below, do not make changes below this line -------------
 
 -- UI Window Setup
-local window = UI.CreateWindow('houseManager', 'Rum Runners House Manager v0.1.0')
+local window = UI.CreateWindow('houseManager', 'Rum Runners House Manager v1.0.0')
 if window then
     window:SetPosition(50, 75)
     window:SetSize(280, 280)
@@ -64,72 +64,41 @@ if window then
     local statusLabel = window:AddLabel(10, 240, 'Status: Ready')
     statusLabel:SetColor(1, 1, 1, 1)
 
-    -- Helper Functions
     local function SecureItem()
         Player.Say("I wish to secure this")
-       -- if Targeting.WaitForTarget(2000) then
-          --  local targetSerial = Targeting.GetNewTarget()
-          --  if targetSerial then
-              --  Targeting.Target(targetSerial)
-              --  Messages.Overhead("Item secured!", Colors.Action, targetSerial.Serial)
-             --   statusLabel:SetText("Status: Item secured")
-           -- else
-              --  Messages.Print("Failed to secure item.")
-              --  statusLabel:SetText("Status: Failed to secure item")
-          --  end
-       -- end
+        statusLabel:SetText("Status: Securing item...")
+        statusLabel:SetColor(1, 1, 0, 1) -- Yellow
+        Messages.Print("Please target the item to secure.", Colors.Info)
     end
 
     local function ReleaseItem()
         Player.Say("I wish to release this")
-        if Targeting.WaitForTarget(2000) then
-            local targetSerial = Targeting.GetNewTarget()
-            if targetSerial then
-                Targeting.Target(targetSerial)
-                Messages.Overhead("Item released!", Colors.Action, targetSerial)
-                statusLabel:SetText("Status: Item released")
-            else
-                Messages.Print("Failed to release item.")
-                statusLabel:SetText("Status: Failed to release item")
-            end
-        end
+        statusLabel:SetText("Status: Releasing item...")
+        statusLabel:SetColor(1, 1, 0, 1)
+        Messages.Print("Please target the item to release.", Colors.Info)
     end
 
     local function LockDownItem()
         Player.Say("I wish to lock this down")
-        if Targeting.WaitForTarget(2000) then
-            local targetSerial = Targeting.GetNewTarget()
-            if targetSerial then
-                Targeting.Target(targetSerial)
-                Messages.Overhead("Item locked down!", Colors.Action, targetSerial)
-                statusLabel:SetText("Status: Item locked down")
-            else
-                Messages.Print("Failed to lock down item.")
-                statusLabel:SetText("Status: Failed to lock down item")
-            end
-        end
+        statusLabel:SetText("Status: Locking down item...")
+        statusLabel:SetColor(1, 1, 0, 1)
+        Messages.Print("Please target the item to lock down.", Colors.Info)
     end
 
     local function PlaceTrashBarrel()
         Player.Say("I wish to place a trash barrel")
-        Messages.Print("Trash barrel placed.")
-        statusLabel:SetText("Status: Trash barrel placed")
+        statusLabel:SetText("Status: Placing trash barrel...")
+        statusLabel:SetColor(1, 1, 0, 1)
+        Messages.Print("Please target the spot to place trash barrel.", Colors.Info)
     end
 
     local function BanPlayer()
         Player.Say("I ban thee")
-        if Targeting.WaitForTarget(2000) then
-            local targetSerial = Targeting.GetNewTarget()
-            if targetSerial then
-                Targeting.Target(targetSerial)
-                Messages.Overhead("Player banned!", Colors.Alert, targetSerial)
-                statusLabel:SetText("Status: Player banned")
-            else
-                Messages.Print("Failed to ban player.")
-                statusLabel:SetText("Status: Failed to ban player")
-            end
-        end
+        statusLabel:SetText("Status: Banning player...")
+        statusLabel:SetColor(1, 1, 0, 1)
+        Messages.Print("Please target the player to ban.", Colors.Info)
     end
+
 
     -- Set up button event handlers
     secureButton:SetOnClick(SecureItem)
