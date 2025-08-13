@@ -48,55 +48,69 @@ local Config = {
     firstRun       = true     -- 
 }
 
-------------- Main script is below, do not make changes below this line -------------
+------------- Main script is below, do not make changes below this line -------------
 
-------------- Ore Combining Functions -------------
-local function TryCombineOrePair(largeOre, smallOre)
-    Player.UseObject(largeOre.Serial)
-    if Targeting.WaitForTarget(1000) then
-        Targeting.Target(smallOre.Serial)
-        Pause(625)
-        return true
-    end
-    return false
-end
-
-local function CombineOrePiles()
-    local largeOreGraphics = { [0x19B9] = true, [0x19B8] = true, [0x19BA] = true }
-    local smallOreGraphic = 0x19B7
-    local didCombineAnything = false
-
+-- Function to reduce ore piles by combining large and small ore piles in the player's inventory
+local function ReduceOre()
+    -- Define the graphics IDs for large ore piles
+    local largeOrePile = { [0x19B9] = true, [0x19B8] = true, [0x19BA] = true }
+    -- Define the graphic ID for small ore piles
+    local smallOrePile = 0x19B7
+    -- Flag to track if any ore was reduced during the process
+    local isOreReduced = false
+    -- Repeat the process until no more ore can be reduced
     repeat
-        local didCombine = false
+        -- Flag to track if ore was reduced in the current iteration
+        local finishedReduceOre = false
+        -- Retrieve a list of all items in the player's inventory
         local itemList = Items.FindByFilter({})
 
+        -- Iterate through the list of items to find large ore piles
         for _, item1 in ipairs(itemList) do
-            if item1 and item1.RootContainer == Player.Serial and largeOreGraphics[item1.Graphic] then
+            -- Check if the item exists, is in the player's inventory, and is a large ore pile
+            if item1 and item1.RootContainer == Player.Serial and largeOrePile[item1.Graphic] then
+                -- Iterate through the list again to find small ore piles that match the large ore pile
                 for _, item2 in ipairs(itemList) do
+                    -- Check if the item exists, is in the player's inventory, has the same hue, and is a small ore pile
                     if item2 and item2.RootContainer == Player.Serial
                     and item1.Hue == item2.Hue
-                    and item2.Graphic == smallOreGraphic then
-                        if TryCombineOrePair(item1, item2) then
-                            Messages.Overhead("Combining ore piles...", Colors.Caution, Player.Serial)
-                            didCombine = true
-                            didCombineAnything = true
-                            Pause(625) -- Let stack settle
+                    and item2.Graphic == smallOrePile then
+                        -- Attempt to reduce the ore pair by interacting with the large ore pile
+                        Player.UseObject(item1.Serial)
+                        -- Wait for the targeting system to activate
+                        if Targeting.WaitForTarget(1000) then
+                            -- Target the small ore pile to combine it with the large ore pile
+                            Targeting.Target(item2.Serial)
+                            -- Pause to allow the game to process the combination
+                            Pause(500)
+                            -- Display a message indicating that ore piles are being reduced
+                            Messages.Overhead("Reducing ore piles...", Colors.Caution, Player.Serial)
+                            -- Set flags to indicate that ore was reduced
+                            finishedReduceOre = true
+                            isOreReduced = true
+                            -- Break out of the inner loop after successfully reducing ore
                             break
                         end
                     end
                 end
             end
-            if didCombine then break end
+            -- Break out of the outer loop if ore was reduced in this iteration
+            if finishedReduceOre then break end
         end
-    until not didCombine
+    -- Continue the process until no more ore can be reduced
+    until not finishedReduceOre
 
-    if didCombineAnything then
-        Messages.Overhead("Ore combined.", Colors.Confirm, Player.Serial)
+    -- Display a message if any ore was reduced and return true
+    if isOreReduced then
+        Messages.Overhead("All Ore reduced!", Colors.Confirm, Player.Serial)
         return true
     else
+        -- Return false if no ore was reduced
+	Messages.Overhead("No Ore to reduce!", Colors.Alert, Player.Serial)
         return false
     end
 end
+
 
 ------------- Pickaxe Functions -------------
 
@@ -285,3 +299,4 @@ while true do
 
     Pause(1500)
 end
+
