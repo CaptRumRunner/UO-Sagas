@@ -51,40 +51,26 @@ local Config = {
 ------------- Main script is below, do not make changes below this line -------------
 
 -- Function to reduce ore piles by combining large and small ore piles in the player's inventory
-local function ReduceOre()
-    -- Define the graphics IDs for large ore piles
-    local largeOrePile = { [0x19B9] = true, [0x19B8] = true, [0x19BA] = true }
-    -- Define the graphic ID for small ore piles
-    local smallOrePile = 0x19B7
-    -- Flag to track if any ore was reduced during the process
-    local isOreReduced = false
-    -- Repeat the process until no more ore can be reduced
-    repeat
-        -- Flag to track if ore was reduced in the current iteration
-        local finishedReduceOre = false
-        -- Retrieve a list of all items in the player's inventory
+local function ReduceOre()  -- Define the graphics IDs for large ore piles
+    local largeOrePile = { [0x19B9] = true, [0x19B8] = true, [0x19BA] = true } -- Define the graphic ID for small ore piles
+    local smallOrePile = 0x19B7 -- Flag to track if any ore was reduced during the process
+    local isOreReduced = false -- Repeat the process until no more ore can be reduced
+    repeat -- Flag to track if ore was reduced in the current iteration
+        local finishedReduceOre = false -- Retrieve a list of all items in the player's inventory
         local itemList = Items.FindByFilter({})
 
         -- Iterate through the list of items to find large ore piles
-        for _, item1 in ipairs(itemList) do
-            -- Check if the item exists, is in the player's inventory, and is a large ore pile
-            if item1 and item1.RootContainer == Player.Serial and largeOrePile[item1.Graphic] then
-                -- Iterate through the list again to find small ore piles that match the large ore pile
-                for _, item2 in ipairs(itemList) do
-                    -- Check if the item exists, is in the player's inventory, has the same hue, and is a small ore pile
-                    if item2 and item2.RootContainer == Player.Serial
+        for _, item1 in ipairs(itemList) do -- Check if the item exists, is in the player's inventory, and is a large ore pile
+            if item1 and item1.RootContainer == Player.Serial and largeOrePile[item1.Graphic] then                
+                for _, item2 in ipairs(itemList) do -- Iterate through the list again to find small ore piles that match the large ore pile                    
+                    if item2 and item2.RootContainer == Player.Serial -- Check if the item exists, is in the player's inventory, has the same hue, and is a small ore pile
                     and item1.Hue == item2.Hue
-                    and item2.Graphic == smallOrePile then
-                        -- Attempt to reduce the ore pair by interacting with the large ore pile
-                        Player.UseObject(item1.Serial)
-                        -- Wait for the targeting system to activate
+                    and item2.Graphic == smallOrePile then -- Attempt to reduce the ore pair by interacting with the large ore pile
+                        Player.UseObject(item1.Serial) -- Wait for the targeting system to activate
                         if Targeting.WaitForTarget(1000) then
-                            -- Target the small ore pile to combine it with the large ore pile
-                            Targeting.Target(item2.Serial)
-                            -- Pause to allow the game to process the combination
-                            Pause(500)
-                            -- Display a message indicating that ore piles are being reduced
-                            Messages.Overhead("Reducing ore piles...", Colors.Caution, Player.Serial)
+                            Targeting.Target(item2.Serial) -- Target the small ore pile to combine it with the large ore pile
+                            Pause(500) -- Pause to allow the game to process the combination
+                            Messages.Overhead("Reducing ore piles...", Colors.Caution, Player.Serial) -- Display a message indicating that ore piles are being reduced
                             -- Set flags to indicate that ore was reduced
                             finishedReduceOre = true
                             isOreReduced = true
@@ -111,192 +97,143 @@ local function ReduceOre()
     end
 end
 
-
-------------- Pickaxe Functions -------------
-
-function GetEquippedPickaxe()
-    local pickaxe = Items.FindByLayer(1)
-    if pickaxe and string.find(string.lower(pickaxe.Name or ""), "pickaxe") then
-        return pickaxe
-    end
-    return nil
-end
-
-function EquipPickaxe()
-    local function ClearHands()
-        Messages.Overhead("Clearing hands...", Colors.Warning, Player.Serial)
-        local cleared = Player.ClearHands("both")
-        if cleared then Pause(500) end
+-- Function to check if you have a Pickaxe equip and if not, clear hands and equip a pickaxe
+function EquipPickaxe()  -- Check if a pickaxe is already equipped in Layer 1
+    local checkEquippedPickaxe = Items.FindByLayer(1)  -- Find the item equipped in Layer 1
+    if checkEquippedPickaxe and string.find(string.lower(checkEquippedPickaxe.Name or ""), "pickaxe") then
+        -- Return the currently equipped pickaxe if found
+        Messages.Overhead("Pickaxe already equipped!", Colors.Info, Player.Serial)
+        return checkEquippedPickaxe
     end
 
-    local function FindPickaxes()
-        local items = Items.FindByFilter({ onground = false })
-        local result = {}
-        for _, item in ipairs(items) do
-            if item.RootContainer == Player.Serial and item.Layer ~= 1 and item.Layer ~= 2 then
-                if string.find(string.lower(item.Name or ""), "pickaxe") then
-                    table.insert(result, item)
-                end
+    -- Clear the player's hands to prepare for equipping a pickaxe
+    Messages.Overhead("Clearing hands...", Colors.Warning, Player.Serial)
+    local clearHands = Player.ClearHands("both")  -- Unequip items from both hands
+    if clearHands then Pause(500) end  -- Pause to allow the game to process clearing hands
+
+    -- Search the player's inventory for pickaxes
+    local items = Items.FindByFilter({ onground = false })  -- Get all items in inventory
+    local pickaxes = {}  -- Initialize a table to store found pickaxes
+    for _, item in ipairs(items) do
+        -- Check if the item is in the player's inventory, not equipped, and is a pickaxe
+        if item.RootContainer == Player.Serial and item.Layer ~= 1 and item.Layer ~= 2 then
+            if string.find(string.lower(item.Name or ""), "pickaxe") then
+                table.insert(pickaxes, item)  -- Add the pickaxe to the list
             end
         end
-        return result
     end
 
-    ClearHands()
-    local pickaxes = FindPickaxes()
+    -- If no pickaxes are found, display an error message and return nil
     if #pickaxes == 0 then
-        Messages.Overhead("No pickaxes", Colors.Alert, Player.Serial)
+        Messages.Overhead("No pickaxes found!", Colors.Alert, Player.Serial)
         return nil
     end
 
+    -- Attempt to equip the first pickaxe in the list
     for _, pickaxe in ipairs(pickaxes) do
         Messages.Overhead("Equip: " .. (pickaxe.Name or "Unnamed"), Colors.Info, Player.Serial)
-        Player.Equip(pickaxe.Serial)
-        Pause(500)
+        Player.Equip(pickaxe.Serial)  -- Equip the pickaxe
+        Pause(500)  -- Pause to allow the game to process equipping
 
-        local timeout = os.clock() + 1.0
+        -- Check if the pickaxe was successfully equipped
+        local timeout = os.clock() + 1.0  -- Set a timeout for 1 second
         while os.clock() < timeout do
-            local equippedNow = Items.FindByLayer(1)
-            if equippedNow and equippedNow.Serial == pickaxe.Serial then
-                Messages.Overhead("Equipped!", Colors.Action, Player.Serial)
-                return equippedNow
+            local equipPickaxeNow = Items.FindByLayer(1)  -- Check Layer 1 for the equipped item
+            if equipPickaxeNow and equipPickaxeNow.Serial == pickaxe.Serial then
+                -- Display success message and return the equipped pickaxe
+                Messages.Overhead("Pickaxe equipped!", Colors.Action, Player.Serial)
+                return equipPickaxeNow
             end
-            Pause(125)
+            Pause(125)  -- Pause briefly before rechecking
         end
+
+        -- Break out of the loop if equipping was successful
+        break
     end
 
-    Messages.Overhead("Equip failed", Colors.Alert, Player.Serial)
+    -- If equipping fails, display an error message and return nil
+    Messages.Overhead("Failed to equip pickaxe!", Colors.Alert, Player.Serial)
     return nil
 end
 
 ------------- Mining Functions -------------
 
-local function UsePickaxe(pickaxe)
-    Player.UseObject(pickaxe.Serial)
-    Pause(100)
-    Messages.Overhead("Using pickaxe", Colors.Action, Player.Serial)
-end
+function MineWithPickaxe()
+    -- List of end messages to check in the journal
+    local endMessages = {
+        "You are too far away.",
+        "There is no metal here to mine.",
+        "You can't mine that.",
+        "You have no line of sight."
+    }
 
-local function WaitForValidTarget()
-    while true do
-        Messages.Overhead("Please target a mining tile...", Colors.Info, Player.Serial)
-        local pickaxe = GetEquippedPickaxe()
-        if not pickaxe then
-            pickaxe = EquipPickaxe()
-            if not pickaxe then
-                Messages.Overhead("No pickaxe available to use for targeting!", Colors.Alert, Player.Serial)
-                Pause(3000)
-                goto continue_wait -- retry loop
+    -- Function to check the journal for end messages
+    local function CheckJournalForEndMessage()
+        local journalEntries = Journal.GetLines()  -- Get all journal entries
+        for _, message in ipairs(endMessages) do
+            for _, entry in ipairs(journalEntries) do
+                if string.find(string.lower(entry), string.lower(message)) then
+                    return true  -- End message found
+                end
             end
         end
+        return false  -- No end message found
+    end
 
-        Player.UseObject(pickaxe.Serial) -- open targeting cursor with pickaxe double click
-        Pause(200)
-
-        if not Targeting.WaitForTarget(60000) then -- wait indefinitely up to 60 sec
-            Messages.Overhead("Timeout waiting for target", Colors.Alert, Player.Serial)
-            goto continue_wait
-        else
-            local serial = Targeting.LastTarget
-            if serial then
-                Config.lastTileSerial = serial
-                Messages.Overhead("Mining tile selected: " .. tostring(serial), Colors.Info, Player.Serial)
-                return serial
-            end
+    -- Main mining loop
+    while true do -- Double-click the pickaxe to bring up the targeting cursor        
+        local pickaxe = Items.FindByLayer(1)  -- Find the equipped pickaxe in Layer 1
+        if not pickaxe or not string.find(string.lower(pickaxe.Name or ""), "pickaxe") then
+            Messages.Overhead("No pickaxe equipped!", Colors.Alert, Player.Serial)
+            return false  -- Exit if no pickaxe is equipped
         end
-        ::continue_wait::
-        Pause(100)
+
+        Player.UseObject(pickaxe.Serial)  -- Double-click the pickaxe to start mining
+
+        -- Wait for the player to select a target using the targeting cursor
+        local targetSerial = Targeting.GetNewTarget(10000)  -- Wait for up to 10 seconds for the player to select a target
+        if not targetSerial then
+            Messages.Overhead("No target selected. Restarting mining.", Colors.Warning, Player.Serial)
+            goto continue  -- Restart the loop if no target is selected
+        end
+
+        -- Check the journal for end messages
+        if CheckJournalForEndMessage() then
+            Messages.Overhead("End message found. Reducing ore piles and restarting mining.", Colors.Warning, Player.Serial)
+            Targeting.ClearLast()  -- Clear the last target
+            ReduceOre()  -- Call the ReduceOre function to reduce ore piles
+            Pause(500)  -- Brief pause before restarting
+            goto continue  -- Restart the loop
+        end
+
+        -- Retarget the last target if no end message is found
+        Targeting.SetLastTarget(targetSerial)  -- Save the selected target as the last target
+        Targeting.TargetLast()  -- Retarget the last clicked location
+        Pause(500)  -- Brief pause before checking the journal again
+
+        -- Check the journal again for end messages
+        if CheckJournalForEndMessage() then
+            Messages.Overhead("End message found. Reducing ore piles and restarting mining.", Colors.Warning, Player.Serial)
+            Targeting.ClearLast()  -- Clear the last target
+            ReduceOre()  -- Call the ReduceOre function to reduce ore piles
+            Pause(500)  -- Brief pause before restarting
+            goto continue  -- Restart the loop
+        end
+
+        ::continue::
     end
 end
 
-local function CheckMiningEnd()
-    if Journal.Contains("There is no metal here to mine.") then
-        Messages.Overhead("Tile depleted", Colors.Warning, Player.Serial)
-        CombineOrePiles()        
-        Config.lastTileSerial = nil
-    elseif Journal.Contains("too far") then
-        Messages.Overhead("Too far from mining tile", Colors.Warning, Player.Serial)
-        CombineOrePiles()
-        Config.lastTileSerial = nil
-    elseif Journal.Contains("cannot be seen") then
-        Messages.Overhead("Mining tile not visible", Colors.Warning, Player.Serial)
-        CombineOrePiles()
-        Config.lastTileSerial = nil
-    elseif Journal.Contains("can't mine") or Journal.Contains("cannot mine that") then
-        Messages.Overhead("Cannot mine that", Colors.Warning, Player.Serial)
-        CombineOrePiles()
-        Config.lastTileSerial = nil
-    end
-    return nil
-end
 
-local function PerformMining(firstRun)
-    local pickaxe = GetEquippedPickaxe()
-    if not pickaxe then
-        Messages.Overhead("No pickaxe equipped!", Colors.Alert, Player.Serial)
-        pickaxe = EquipPickaxe()
-        if not pickaxe then
-            Pause(3000)
-            return nil, firstRun
-        end
-    end
+------------- Main loop to keep the script running indefinitely -------------
 
-    if firstRun or Config.lastTileSerial == nil then
-        WaitForValidTarget()
-    end
-
-    Journal.Clear()
-    UsePickaxe(pickaxe)
-
-    if not Targeting.WaitForTarget(1000) then
-        Messages.Overhead("Failed to get target cursor", Colors.Warning, Player.Serial)
-        Config.lastTileSerial = nil
-        return nil, true -- reset targeting
-    end
-
-    Targeting.SetLastTarget(Config.lastTileSerial)
-    if not Targeting.TargetLast() then
-        Messages.Overhead("TargetLast failed", Colors.Warning, Player.Serial)
-        Config.lastTileSerial = nil
-        return nil, true -- reset targeting
-    end
-
-    local timeout = os.clock() + 3.0
-    while os.clock() < timeout do
-        local miningResult = CheckMiningEnd()
-        if miningResult == "NoOre" then
-            CombineOrePiles()
-            Config.lastTileSerial = nil
-            return nil, true -- reset targeting
-        elseif miningResult == "TooFar" or miningResult == "NotVisible" or miningResult == "CannotMine" then
-            Config.lastTileSerial = nil
-            return nil, true -- reset targeting
-        end
-        Pause(100)
-    end
-
-    return true, false
-end
-
-
-------------- Main Loop -------------
-
-local firstRun = true
-Journal.Clear()
+Journal.Clear() -- Clear the journal at the start
 
 while true do
-    if not GetEquippedPickaxe() then
-        EquipPickaxe()
-    end
-
-    local success, updatedFirstRun = PerformMining(firstRun)
-    if not success then
-        Messages.Overhead("Mining stopped or node depleted.", Colors.Alert, Player.Serial)
-        firstRun = true -- reset for new manual targeting
-    else
-        firstRun = updatedFirstRun
-    end
-
-    Pause(1500)
+    -- Start the mining process
+    Messages.Overhead("Starting mining process...", Colors.Info, Player.Serial)
+    MineWithPickaxe()
+    Pause(100) -- Brief pause before restarting the loop
 end
+
 
