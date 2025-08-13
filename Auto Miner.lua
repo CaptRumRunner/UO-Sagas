@@ -42,13 +42,67 @@ Messages.Print("Welcome to the Auto Miner Assistant Script!", Colors.Info)
 Messages.Print("Booting up... Initializing systems... ", Colors.Info)
 Messages.Print("__________________________________", Colors.Info)
 
--- User Settings (feel free to edit this section if needed)
+-- User Settings (Feel free to edit this section as needed)
 local Config = {
-    lastTileSerial = nil,     -- Saved mining tile serial
-    firstRun       = true     -- 
+    isMining = false,      -- Tracks whether mining is active
 }
-
+	
 ------------- Main script is below, do not make changes below this line -------------
+
+-- UI Window Setup
+local window = UI.CreateWindow('miningAssistant', 'Auto Miner Assistant v1.0.0')
+if window then
+    window:SetPosition(50, 75)
+    window:SetSize(280, 180)
+    window:SetResizable(false)
+
+    -- Add title
+    window:AddLabel(10, 20, 'Mining Assistant Menu'):SetColor(0.2, 0.8, 1, 1)
+
+    -- Add buttons for mining tasks
+    local startButton = window:AddButton(10, 50, 'Start Mining', 160, 30)
+    local stopButton = window:AddButton(10, 90, 'Stop Mining', 160, 30)
+
+    -- Add status label
+    local statusLabel = window:AddLabel(10, 130, 'Status: Ready')
+    statusLabel:SetColor(1, 1, 1, 1)
+
+    -- Function to start mining
+    local function StartMining()
+        if Config.isMining then
+            Messages.Print("Mining is already running.", Colors.Warning)
+            return
+        end
+
+        Config.isMining = true
+        statusLabel:SetText("Status: Mining...")
+        statusLabel:SetColor(0, 1, 0, 1) -- Green
+        Messages.Print("Mining process started.", Colors.Action)
+
+        -- Mining loop
+        while Config.isMining do
+            MineWithPickaxe()  -- Call the mining function
+            Pause(100)  -- Allow UI updates
+        end
+    end
+
+    -- Function to stop mining
+    local function StopMining()
+        if not Config.isMining then
+            Messages.Print("Mining is not running.", Colors.Warning)
+            return
+        end
+
+        Config.isMining = false
+        statusLabel:SetText("Status: Stopped")
+        statusLabel:SetColor(1, 0, 0, 1) -- Red
+        Messages.Print("Mining process stopped.", Colors.Alert)
+    end
+
+    -- Set up button event handlers
+    startButton:SetOnClick(StartMining)
+    stopButton:SetOnClick(StopMining)
+end
 
 -- Function to reduce ore piles by combining large and small ore piles in the player's inventory
 local function ReduceOre()  -- Define the graphics IDs for large ore piles
@@ -181,59 +235,51 @@ function MineWithPickaxe()
     end
 
     -- Main mining loop
-    while true do -- Double-click the pickaxe to bring up the targeting cursor        
-        local pickaxe = Items.FindByLayer(1)  -- Find the equipped pickaxe in Layer 1
-        if not pickaxe or not string.find(string.lower(pickaxe.Name or ""), "pickaxe") then
+    while Config.isMining do -- Double-click the pickaxe to bring up the targeting cursor        
+        local pickaxe = EquipPickaxe()  -- Find the equipped pickaxe in Layer 1
+        if not pickaxe then
             Messages.Overhead("No pickaxe equipped!", Colors.Alert, Player.Serial)
-            return false  -- Exit if no pickaxe is equipped
+			Config.isMining = false
+            return  -- Exit if no pickaxe is equipped
         end
 
         Player.UseObject(pickaxe.Serial)  -- Double-click the pickaxe to start mining
-
-        -- Wait for the player to select a target using the targeting cursor
-        local targetSerial = Targeting.GetNewTarget(10000)  -- Wait for up to 10 seconds for the player to select a target
+		local targetSerial = Targeting.GetNewTarget(15000)  -- Wait for the player to select a target
         if not targetSerial then
             Messages.Overhead("No target selected. Restarting mining.", Colors.Warning, Player.Serial)
-            goto continue  -- Restart the loop if no target is selected
+            break  -- Restart the loop if no target is selected
         end
 
         -- Check the journal for end messages
         if CheckJournalForEndMessage() then
-            Messages.Overhead("End message found. Reducing ore piles and restarting mining.", Colors.Warning, Player.Serial)
-            Targeting.ClearLast()  -- Clear the last target
+            Messages.Overhead("No Ore found. Reducing ore piles and restarting mining.", Colors.Warning, Player.Serial)
             ReduceOre()  -- Call the ReduceOre function to reduce ore piles
             Pause(500)  -- Brief pause before restarting
-            goto continue  -- Restart the loop
+            break -- Exit the loop and restart the mining cycle
         end
 
-        -- Retarget the last target if no end message is found
         Targeting.SetLastTarget(targetSerial)  -- Save the selected target as the last target
-        Targeting.TargetLast()  -- Retarget the last clicked location
-        Pause(500)  -- Brief pause before checking the journal again
 
-        -- Check the journal again for end messages
-        if CheckJournalForEndMessage() then
-            Messages.Overhead("End message found. Reducing ore piles and restarting mining.", Colors.Warning, Player.Serial)
-            Targeting.ClearLast()  -- Clear the last target
-            ReduceOre()  -- Call the ReduceOre function to reduce ore piles
-            Pause(500)  -- Brief pause before restarting
-            goto continue  -- Restart the loop
-        end
-
-        ::continue::
+		-- Inner loop: Continue mining the last target until an end message is found
+   		while Config.isMining do 
+			Player.UseObject(pickaxe.Serial) -- Double-click the pickaxe to activate the targeting system
+        	Targeting.TargetLast()  -- Retarget the last clicked location
+			Pause(500)  -- Brief pause before continuing
+			
+       		if CheckJournalForEndMessage() then -- Check the journal for end messages
+            	Messages.Overhead("Vein has been depleted. Find a new tile.", Colors.Warning, Player.Serial)
+            	break  -- Exit the inner loop to restart the mining cycle
+        	end
     end
 end
 
 
 ------------- Main loop to keep the script running indefinitely -------------
 
-Journal.Clear() -- Clear the journal at the start
-
 while true do
-    -- Start the mining process
-    Messages.Overhead("Starting mining process...", Colors.Info, Player.Serial)
-    MineWithPickaxe()
-    Pause(100) -- Brief pause before restarting the loop
+	Journal.Clear() -- Clear the journal at the start
+    Pause(50)
 end
+
 
 
