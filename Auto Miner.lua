@@ -3,7 +3,7 @@
 Auto Miner Assistant Script
 --------------------------------------------------------------------
 Version History:
-v0.1.0 - Initial release
+v0.2.0 - Initial release
 --------------------------------------------------------------------
 Script created by: 
   ___   _   _   __  __     ___   _   _   _   _   _   _   ____   ___ 
@@ -23,6 +23,7 @@ and automatic re-targeting with no timeout until user selects new mining tile.
 Script Notes:
   
 --------------------------------------------------------------------
+
 ]]
 
 -- Define Color Scheme
@@ -44,9 +45,10 @@ Messages.Print("__________________________________", Colors.Info)
 
 -- User Settings (Feel free to edit this section as needed)
 local Config = {
-    isMining = false,      -- Tracks whether mining is active
+    isMining = false,           -- Tracks whether mining is active
+    firstRun = true
 }
-	
+
 ------------- Main script is below, do not make changes below this line -------------
 
 -- UI Window Setup
@@ -67,145 +69,110 @@ if window then
     local statusLabel = window:AddLabel(10, 130, 'Status: Ready')
     statusLabel:SetColor(1, 1, 1, 1)
 
-    -- Function to start mining
-    local function StartMining()
-        if Config.isMining then
-            Messages.Print("Mining is already running.", Colors.Warning)
-            return
-        end
+    local detailLabel = window:AddLabel(10, 160, 'Action: Idle')
+    detailLabel:SetColor(0.8, 0.8, 0.8, 1)
 
+    -- Button handlers
+    startButton:SetOnClick(function()
         Config.isMining = true
-        statusLabel:SetText("Status: Mining...")
-        statusLabel:SetColor(0, 1, 0, 1) -- Green
-        Messages.Print("Mining process started.", Colors.Action)
+        statusLabel:SetText('Status: Mining Start')
+        statusLabel:SetColor(0, 1, 0, 1)
+        Messages.Print("Mining started.")
+    end)
 
-        -- Mining loop
-        while Config.isMining do
-            MineWithPickaxe()  -- Call the mining function
-            Pause(100)  -- Allow UI updates
-        end
-    end
-
-    -- Function to stop mining
-    local function StopMining()
-        if not Config.isMining then
-            Messages.Print("Mining is not running.", Colors.Warning)
-            return
-        end
-
+    stopButton:SetOnClick(function()
         Config.isMining = false
-        statusLabel:SetText("Status: Stopped")
-        statusLabel:SetColor(1, 0, 0, 1) -- Red
-        Messages.Print("Mining process stopped.", Colors.Alert)
-    end
-
-    -- Set up button event handlers
-    startButton:SetOnClick(StartMining)
-    stopButton:SetOnClick(StopMining)
+        statusLabel:SetText('Status: Mining Stopped')
+        statusLabel:SetColor(0, 1, 0, 1)
+        Messages.Print("Mining stopped.")
+    end)
 end
 
 -- Function to reduce ore piles by combining large and small ore piles in the player's inventory
 local function ReduceOre()  -- Define the graphics IDs for large ore piles
-    local largeOrePile = { [0x19B9] = true, [0x19B8] = true, [0x19BA] = true } -- Define the graphic ID for small ore piles
-    local smallOrePile = 0x19B7 -- Flag to track if any ore was reduced during the process
-    local isOreReduced = false -- Repeat the process until no more ore can be reduced
-    repeat -- Flag to track if ore was reduced in the current iteration
-        local finishedReduceOre = false -- Retrieve a list of all items in the player's inventory
+    local largeOrePile = { [0x19B9] = true, [0x19B8] = true, [0x19BA] = true } -- Large ore pile IDs
+    local smallOrePile = 0x19B7 -- Small ore pile ID
+    local isOreReduced = false
+
+    repeat
+        local finishedReduceOre = false
         local itemList = Items.FindByFilter({})
 
-        -- Iterate through the list of items to find large ore piles
-        for _, item1 in ipairs(itemList) do -- Check if the item exists, is in the player's inventory, and is a large ore pile
-            if item1 and item1.RootContainer == Player.Serial and largeOrePile[item1.Graphic] then                
-                for _, item2 in ipairs(itemList) do -- Iterate through the list again to find small ore piles that match the large ore pile                    
-                    if item2 and item2.RootContainer == Player.Serial -- Check if the item exists, is in the player's inventory, has the same hue, and is a small ore pile
+        for _, item1 in ipairs(itemList) do
+            if item1 and item1.RootContainer == Player.Serial and largeOrePile[item1.Graphic] then
+                for _, item2 in ipairs(itemList) do
+                    if item2 and item2.RootContainer == Player.Serial
                     and item1.Hue == item2.Hue
-                    and item2.Graphic == smallOrePile then -- Attempt to reduce the ore pair by interacting with the large ore pile
-                        Player.UseObject(item1.Serial) -- Wait for the targeting system to activate
+                    and item2.Graphic == smallOrePile then
+                        Player.UseObject(item1.Serial)
                         if Targeting.WaitForTarget(1000) then
-                            Targeting.Target(item2.Serial) -- Target the small ore pile to combine it with the large ore pile
-                            Pause(500) -- Pause to allow the game to process the combination
-                            Messages.Overhead("Reducing ore piles...", Colors.Caution, Player.Serial) -- Display a message indicating that ore piles are being reduced
-                            -- Set flags to indicate that ore was reduced
+                            Targeting.Target(item2.Serial)
+                            Pause(500)
+                            Messages.Overhead("Reducing ore piles...", Colors.Caution, Player.Serial)
                             finishedReduceOre = true
                             isOreReduced = true
-                            -- Break out of the inner loop after successfully reducing ore
                             break
                         end
                     end
                 end
             end
-            -- Break out of the outer loop if ore was reduced in this iteration
             if finishedReduceOre then break end
         end
-    -- Continue the process until no more ore can be reduced
     until not finishedReduceOre
 
-    -- Display a message if any ore was reduced and return true
     if isOreReduced then
         Messages.Overhead("All Ore reduced!", Colors.Confirm, Player.Serial)
         return true
     else
-        -- Return false if no ore was reduced
-	Messages.Overhead("No Ore to reduce!", Colors.Alert, Player.Serial)
+        Messages.Overhead("No Ore to reduce!", Colors.Alert, Player.Serial)
         return false
     end
 end
 
--- Function to check if you have a Pickaxe equip and if not, clear hands and equip a pickaxe
-function EquipPickaxe()  -- Check if a pickaxe is already equipped in Layer 1
-    local checkEquippedPickaxe = Items.FindByLayer(1)  -- Find the item equipped in Layer 1
+-- Function to check if you have a Pickaxe equipped and if not, clear hands and equip a pickaxe
+function EquipPickaxe()
+    local checkEquippedPickaxe = Items.FindByLayer(1)
     if checkEquippedPickaxe and string.find(string.lower(checkEquippedPickaxe.Name or ""), "pickaxe") then
-        -- Return the currently equipped pickaxe if found
         Messages.Overhead("Pickaxe already equipped!", Colors.Info, Player.Serial)
         return checkEquippedPickaxe
     end
 
-    -- Clear the player's hands to prepare for equipping a pickaxe
     Messages.Overhead("Clearing hands...", Colors.Warning, Player.Serial)
-    local clearHands = Player.ClearHands("both")  -- Unequip items from both hands
-    if clearHands then Pause(500) end  -- Pause to allow the game to process clearing hands
+    local clearHands = Player.ClearHands("both")
+    if clearHands then Pause(500) end
 
-    -- Search the player's inventory for pickaxes
-    local items = Items.FindByFilter({ onground = false })  -- Get all items in inventory
-    local pickaxes = {}  -- Initialize a table to store found pickaxes
+    local items = Items.FindByFilter({ onground = false })
+    local pickaxes = {}
     for _, item in ipairs(items) do
-        -- Check if the item is in the player's inventory, not equipped, and is a pickaxe
         if item.RootContainer == Player.Serial and item.Layer ~= 1 and item.Layer ~= 2 then
             if string.find(string.lower(item.Name or ""), "pickaxe") then
-                table.insert(pickaxes, item)  -- Add the pickaxe to the list
+                table.insert(pickaxes, item)
             end
         end
     end
 
-    -- If no pickaxes are found, display an error message and return nil
     if #pickaxes == 0 then
         Messages.Overhead("No pickaxes found!", Colors.Alert, Player.Serial)
         return nil
     end
 
-    -- Attempt to equip the first pickaxe in the list
     for _, pickaxe in ipairs(pickaxes) do
         Messages.Overhead("Equip: " .. (pickaxe.Name or "Unnamed"), Colors.Info, Player.Serial)
-        Player.Equip(pickaxe.Serial)  -- Equip the pickaxe
-        Pause(500)  -- Pause to allow the game to process equipping
+        Player.Equip(pickaxe.Serial)
+        Pause(500)
 
-        -- Check if the pickaxe was successfully equipped
-        local timeout = os.clock() + 1.0  -- Set a timeout for 1 second
+        local timeout = os.clock() + 1.0
         while os.clock() < timeout do
-            local equipPickaxeNow = Items.FindByLayer(1)  -- Check Layer 1 for the equipped item
+            local equipPickaxeNow = Items.FindByLayer(1)
             if equipPickaxeNow and equipPickaxeNow.Serial == pickaxe.Serial then
-                -- Display success message and return the equipped pickaxe
                 Messages.Overhead("Pickaxe equipped!", Colors.Action, Player.Serial)
                 return equipPickaxeNow
             end
-            Pause(125)  -- Pause briefly before rechecking
+            Pause(125)
         end
-
-        -- Break out of the loop if equipping was successful
         break
     end
 
-    -- If equipping fails, display an error message and return nil
     Messages.Overhead("Failed to equip pickaxe!", Colors.Alert, Player.Serial)
     return nil
 end
@@ -213,7 +180,7 @@ end
 ------------- Mining Functions -------------
 
 function MineWithPickaxe()
-    -- List of end messages to check in the journal
+    -- List of journal messages that indicate mining should stop
     local endMessages = {
         "You are too far away.",
         "There is no metal here to mine.",
@@ -221,65 +188,77 @@ function MineWithPickaxe()
         "You have no line of sight."
     }
 
-    -- Function to check the journal for end messages
     local function CheckJournalForEndMessage()
-        local journalEntries = Journal.GetLines()  -- Get all journal entries
         for _, message in ipairs(endMessages) do
-            for _, entry in ipairs(journalEntries) do
-                if string.find(string.lower(entry), string.lower(message)) then
-                    return true  -- End message found
-                end
+            if Journal.Contains(message) then
+                return true
             end
         end
-        return false  -- No end message found
+        return false
     end
 
-    -- Main mining loop
-    while Config.isMining do -- Double-click the pickaxe to bring up the targeting cursor        
-        local pickaxe = EquipPickaxe()  -- Find the equipped pickaxe in Layer 1
-        if not pickaxe then
-            Messages.Overhead("No pickaxe equipped!", Colors.Alert, Player.Serial)
-			Config.isMining = false
-            return  -- Exit if no pickaxe is equipped
-        end
-
-        Player.UseObject(pickaxe.Serial)  -- Double-click the pickaxe to start mining
-		local targetSerial = Targeting.GetNewTarget(15000)  -- Wait for the player to select a target
-        if not targetSerial then
-            Messages.Overhead("No target selected. Restarting mining.", Colors.Warning, Player.Serial)
-            break  -- Restart the loop if no target is selected
-        end
-
-        -- Check the journal for end messages
-        if CheckJournalForEndMessage() then
-            Messages.Overhead("No Ore found. Reducing ore piles and restarting mining.", Colors.Warning, Player.Serial)
-            ReduceOre()  -- Call the ReduceOre function to reduce ore piles
-            Pause(500)  -- Brief pause before restarting
-            break -- Exit the loop and restart the mining cycle
-        end
-
-        Targeting.SetLastTarget(targetSerial)  -- Save the selected target as the last target
-
-		-- Inner loop: Continue mining the last target until an end message is found
-   		while Config.isMining do 
-			Player.UseObject(pickaxe.Serial) -- Double-click the pickaxe to activate the targeting system
-        	Targeting.TargetLast()  -- Retarget the last clicked location
-			Pause(500)  -- Brief pause before continuing
-			
-       		if CheckJournalForEndMessage() then -- Check the journal for end messages
-            	Messages.Overhead("Vein has been depleted. Find a new tile.", Colors.Warning, Player.Serial)
-            	break  -- Exit the inner loop to restart the mining cycle
-        	end
+    -- Equip a pickaxe first
+    local pickaxe = EquipPickaxe()
+    if not pickaxe then
+        Messages.Overhead("No pickaxe equipped!", Colors.Alert, Player.Serial)
+        Config.isMining = false
+        return
     end
+
+    -- Prompt user to select an intial mining target
+    Player.UseObject(pickaxe.Serial)
+    Messages.Overhead("Select initial tile", Colors.Info, Player.Serial)
+    
+    
+    if Targeting.GetNewTarget(30000)
+ then
+
+        Config.firstRun = false
+        Pause(250)
+    end
+
+    -- Check immediately if vein is already empty
+    if CheckJournalForEndMessage() then
+        Messages.Overhead("No ore found at this spot, restarting.", Colors.Warning, Player.Serial)
+        Pause(500)
+        return
+    end
+
+    -- Inner loop: continue mining last target until vein is depleted
+        while Config.firstRun == false do
+            
+        if Journal.Contains("You have worn out your tool!") then
+            Messages.Overhead("Pickaxe broke!", Colors.Alert, Player.Serial)
+            Config.firstRun = true
+            break
+        end
+            Player.UseObject(pickaxe.Serial)        -- Activate pickaxe
+            if Targeting.WaitForTarget(1000) then
+                Targeting.TargetLast()              -- Retarget last clicked location
+            Pause(150)
+             Messages.Overhead("Auto mining vein!", Colors.Info, Player.Serial)
+            end
+            Pause(300)                               -- Brief pause
+
+            if CheckJournalForEndMessage() then     -- Check for depletion or invalid target
+                Messages.Overhead("Vein has been depleted. Select a new tile.", Colors.Warning, Player.Serial)
+                ReduceOre()
+                Config.mineUntilDepleted = false
+                Journal.Clear()
+                Pause(500)
+                break                                -- Exit inner loop
+            end
+        end
+    
 end
 
 
 ------------- Main loop to keep the script running indefinitely -------------
 
 while true do
-	Journal.Clear() -- Clear the journal at the start
-    Pause(50)
+    Journal.Clear()                -- Clear old journal messages
+    if Config.isMining then
+        MineWithPickaxe()
+    end
+    Pause(250)
 end
-
-
-
