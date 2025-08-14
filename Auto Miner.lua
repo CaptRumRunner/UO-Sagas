@@ -37,6 +37,17 @@ local Colors = {
     Status  = 93        -- Blue
 }
 
+-- Ore Hue Table
+local OreHues = {
+    { name = "Shadow",    hue = 0x044E },  -- Dark gray/black
+    { name = "Copper",    hue = 0x06C2 },  -- Coppery orange
+    { name = "Bronze",    hue = 0x0973 },  -- Bronze-like brown
+    { name = "Gold",      hue = 0x08A5 },  -- Golden yellow
+    { name = "Agapite",   hue = 0x097D },  -- Light reddish-brown
+    { name = "Verite",    hue = 0x089F },  -- Greenish hue
+    { name = "Valorite",  hue = 0x05B6 },  -- Deep blue
+}
+
 -- Print Initial Start-Up Greeting
 Messages.Print("___________________________________", Colors.Info)
 Messages.Print("Welcome to the Auto Miner Assistant Script!", Colors.Info)
@@ -47,15 +58,16 @@ Messages.Print("__________________________________", Colors.Info)
 local Config = {
     isMining = false,           -- Tracks whether mining is active
     firstRun = true
+    miningMode = "Solo",        -- Default mining mode
 }
 
 ------------- Main script is below, do not make changes below this line -------------
 
--- UI Window Setup
-local window = UI.CreateWindow('miningAssistant', 'Auto Miner Assistant v1.0.0')
+----------------------------UI Window Setup ----------------------------
+local window = UI.CreateWindow('miningOptions', 'Auto Miner Assistant v1.0.0')
 if window then
     window:SetPosition(50, 75)
-    window:SetSize(280, 180)
+    window:SetSize(400, 200)
     window:SetResizable(false)
 
     -- Add title
@@ -65,6 +77,31 @@ if window then
     local startButton = window:AddButton(10, 50, 'Start Mining', 160, 30)
     local stopButton = window:AddButton(10, 90, 'Stop Mining', 160, 30)
 
+    -- Add radio buttons for mining mode (to the right of the buttons)
+    local soloMiningCheckbox = window:AddCheckbox(200, 50, "Solo Mining", true)  -- Default to Solo Mining
+    local packhorseMiningCheckbox = window:AddCheckbox(200, 75, "Packhorse Mining", false)
+
+     -- Ensure mutual exclusivity for radio buttons
+    soloMiningCheckbox:SetOnCheckedChanged(function(isChecked)
+        if isChecked then
+            packhorseMiningCheckbox:SetChecked(false)
+            Config.miningMode = "Solo"
+            Messages.Print("Mining mode set to: Solo Mining")
+        else
+            soloMiningCheckbox:SetChecked(true)  -- Prevent unchecking both
+        end
+    end)
+
+    packhorseMiningCheckbox:SetOnCheckedChanged(function(isChecked)
+        if isChecked then
+            soloMiningCheckbox:SetChecked(false)
+            Config.miningMode = "Packhorse"
+            Messages.Print("Mining mode set to: Packhorse Mining")
+        else
+            packhorseMiningCheckbox:SetChecked(true)  -- Prevent unchecking both
+        end
+    end)
+  
     -- Add status label
     local statusLabel = window:AddLabel(10, 130, 'Status: Ready')
     statusLabel:SetColor(1, 1, 1, 1)
@@ -86,6 +123,29 @@ if window then
         statusLabel:SetColor(0, 1, 0, 1)
         Messages.Print("Mining stopped.")
     end)
+end
+
+-- Function to handle mining logic based on mode
+local function MineWithPickaxe()
+    if Config.miningMode == "Solo" then
+        Messages.Print("Solo Mining logic executed.")
+        -- Add solo mining logic here
+    elseif Config.miningMode == "Packhorse" then
+        Messages.Print("Packhorse Mining logic executed.")
+        -- Add packhorse mining logic here
+    end
+end
+
+-- Function to check journal for ore hues and display overhead messages
+local function CheckOreHuesInJournal()
+    for _, ore in ipairs(OreHues) do
+        if Journal.Contains(ore.name) then
+            Messages.Overhead("Found " .. ore.name .. " Ore!", Colors.Action, Player.Serial)
+            Journal.Clear()  -- Clear the journal to avoid duplicate messages
+            return true
+        end
+    end
+    return false
 end
 
 -- Function to reduce ore piles by combining large and small ore piles in the player's inventory
@@ -208,48 +268,55 @@ function MineWithPickaxe()
     -- Prompt user to select an intial mining target
     Player.UseObject(pickaxe.Serial)
     Messages.Overhead("Select initial tile", Colors.Info, Player.Serial)
-    
-    
-    if Targeting.GetNewTarget(30000)
- then
 
+    local lastMiningTile = nil
+    if Targeting.GetNewTarget(30000) then
+        lastMiningTile = Targeting.LastTarget.Serial  -- Store the selected target's serial
         Config.firstRun = false
-        Pause(250)
+        Pause(150)
     end
 
     -- Check immediately if vein is already empty
     if CheckJournalForEndMessage() then
-        Messages.Overhead("No ore found at this spot, restarting.", Colors.Warning, Player.Serial)
+        Messages.Overhead("No ore found here, restarting.", Colors.Warning, Player.Serial)
         Pause(500)
         return
     end
 
+    CheckOreHuesInJournal() -- Check for ore hues in the journal
+  
     -- Inner loop: continue mining last target until vein is depleted
         while Config.firstRun == false do
-            
-        if Journal.Contains("You have worn out your tool!") then
-            Messages.Overhead("Pickaxe broke!", Colors.Alert, Player.Serial)
-            Config.firstRun = true
-            break
-        end
             Player.UseObject(pickaxe.Serial)        -- Activate pickaxe
-            if Targeting.WaitForTarget(1000) then
-                Targeting.TargetLast()              -- Retarget last clicked location
-            Pause(150)
-             Messages.Overhead("Auto mining vein!", Colors.Info, Player.Serial)
+
+            -- Handle pickaxe break
+            if Journal.Contains("You have worn out your tool!") then
+                Messages.Overhead("Pickaxe broke! Equipping a new one...", Colors.Alert, Player.Serial)
+                pickaxe = EquipPickaxe()  -- Auto-equip a new pickaxe
+                if not pickaxe then
+                    Messages.Overhead("No pickaxe available! Stopping mining.", Colors.Alert, Player.Serial)
+                    Config.firstRun = true
+                    Journal.Clear()
+                break -- Exit inner loop
+                end
             end
-            Pause(300)                               -- Brief pause
+
+            if Targeting.WaitForTarget(1000) then
+                Targeting.Target(miningTargetSerial)  -- Use the stored target serial
+                Pause(150)
+                Messages.Overhead("Auto mining vein!", Colors.Info, Player.Serial)
+            end
 
             if CheckJournalForEndMessage() then     -- Check for depletion or invalid target
                 Messages.Overhead("Vein has been depleted. Select a new tile.", Colors.Warning, Player.Serial)
                 ReduceOre()
-                Config.mineUntilDepleted = false
                 Journal.Clear()
-                Pause(500)
-                break                                -- Exit inner loop
+                Pause(300)
+                break -- Exit inner loop
             end
-        end
     
+            CheckOreHuesInJournal() -- Check for ore hues in the journal
+       end   
 end
 
 
@@ -262,3 +329,4 @@ while true do
     end
     Pause(250)
 end
+
