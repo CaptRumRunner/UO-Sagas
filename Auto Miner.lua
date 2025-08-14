@@ -48,6 +48,14 @@ local OreHues = {
     { name = "Valorite",  hue = 0x05B6 },  -- Deep blue
 }
 
+-- Journal messages while mining
+local endMessages = {
+     "You are too far away.",
+     "There is no metal here to mine.",
+     "You can't mine that.",
+     "You have no line of sight."
+    }
+
 -- Print Initial Start-Up Greeting
 Messages.Print("___________________________________", Colors.Info)
 Messages.Print("Welcome to the Auto Miner Assistant Script!", Colors.Info)
@@ -57,13 +65,15 @@ Messages.Print("__________________________________", Colors.Info)
 -- User Settings (Feel free to edit this section as needed)
 local Config = {
     isMining = false,           -- Tracks whether mining is active
-    firstRun = true
+    firstRun = true,            -- Tracks valid mining tile to decrease clicking
     miningMode = "Solo",        -- Default mining mode
+    smallIronOreID = 0x19B7     -- Small iron ore graphic ID
 }
 
 ------------- Main script is below, do not make changes below this line -------------
 
-----------------------------UI Window Setup ----------------------------
+------------------------- UI Window Setup -------------------------
+
 local window = UI.CreateWindow('miningOptions', 'Auto Miner Assistant v1.0.0')
 if window then
     window:SetPosition(50, 75)
@@ -125,15 +135,56 @@ if window then
     end)
 end
 
--- Function to handle mining logic based on mode
-local function MineWithPickaxe()
-    if Config.miningMode == "Solo" then
-        Messages.Print("Solo Mining logic executed.")
-        -- Add solo mining logic here
-    elseif Config.miningMode == "Packhorse" then
-        Messages.Print("Packhorse Mining logic executed.")
-        -- Add packhorse mining logic here
+------------------------- Primary Functions Setup -------------------------
+
+-- Function to pick up dropped ore if player weight is below max weight
+local function PickUpDroppedOre()
+    local maxCarryWeight = Player.MaxWeight - Player.Weight  -- Calculate remaining weight capacity
+    local oreWeight = 2  -- Each ore weighs 2 stones
+
+    if maxCarryWeight <= 0 then
+        Messages.Overhead("Cannot pick up more ore! Stopping mining.", Colors.Alert, Player.Serial)
+        Config.isMining = false  -- Stop mining if player cannot carry more ore
+        return
     end
+
+    local oreList = Items.FindByFilter({ type = Config.smallIronOreID, onground = true })
+    local pickedUpWeight = 0
+
+    for _, ore in ipairs(oreList) do
+        local maxOreToPickUp = math.floor((maxCarryWeight - pickedUpWeight) / oreWeight)  -- Calculate how many ore pieces can be picked up
+        if maxOreToPickUp <= 0 then
+            break  -- Stop if no more ore can be picked up
+        end
+
+        local oreToPickUp = math.min(ore.Count, maxOreToPickUp)  -- Pick up only what's needed
+        Player.PickUp(ore.Serial, oreToPickUp)  -- Pick up the required number of ore pieces
+        Pause(500)
+        pickedUpWeight = pickedUpWeight + (oreToPickUp * oreWeight)  -- Update the total weight picked up
+
+        Messages.Overhead("Picked up " .. oreToPickUp .. " ore(s).", Colors.Action, Player.Serial)
+
+        -- Check if player has reached max weight
+        if Player.Weight >= Player.MaxWeight then
+            Messages.Overhead("Player is at max weight! Stopping picking up ore.", Colors.Alert, Player.Serial)
+            Config.isMining = false  -- Stop mining if player cannot carry more ore
+            return
+        end
+    end
+
+    if pickedUpWeight == 0 then
+        Messages.Overhead("No ore to pick up!", Colors.Warning, Player.Serial)
+    end
+end
+
+-- Function to check journal for mining messahes
+local function CheckJournalForEndMessage()
+    for _, message in ipairs(endMessages) do
+        if Journal.Contains(message) then
+             return true
+        end
+    end
+    return false
 end
 
 -- Function to check journal for ore hues and display overhead messages
@@ -148,7 +199,7 @@ local function CheckOreHuesInJournal()
     return false
 end
 
--- Function to reduce ore piles by combining large and small ore piles in the player's inventory
+-- Function to reduce ore piles by combining large and small ore piles
 local function ReduceOre()  -- Define the graphics IDs for large ore piles
     local largeOrePile = { [0x19B9] = true, [0x19B8] = true, [0x19BA] = true } -- Large ore pile IDs
     local smallOrePile = 0x19B7 -- Small ore pile ID
@@ -189,7 +240,7 @@ local function ReduceOre()  -- Define the graphics IDs for large ore piles
     end
 end
 
--- Function to check if you have a Pickaxe equipped and if not, clear hands and equip a pickaxe
+-- Function to equip pickaxe
 function EquipPickaxe()
     local checkEquippedPickaxe = Items.FindByLayer(1)
     if checkEquippedPickaxe and string.find(string.lower(checkEquippedPickaxe.Name or ""), "pickaxe") then
@@ -237,28 +288,10 @@ function EquipPickaxe()
     return nil
 end
 
-------------- Mining Functions -------------
+------------------------- Primary Script Loop -------------------------
 
 function MineWithPickaxe()
-    -- List of journal messages that indicate mining should stop
-    local endMessages = {
-        "You are too far away.",
-        "There is no metal here to mine.",
-        "You can't mine that.",
-        "You have no line of sight."
-    }
-
-    local function CheckJournalForEndMessage()
-        for _, message in ipairs(endMessages) do
-            if Journal.Contains(message) then
-                return true
-            end
-        end
-        return false
-    end
-
-    -- Equip a pickaxe first
-    local pickaxe = EquipPickaxe()
+    local pickaxe = EquipPickaxe() -- Equip a pickaxe first
     if not pickaxe then
         Messages.Overhead("No pickaxe equipped!", Colors.Alert, Player.Serial)
         Config.isMining = false
@@ -267,7 +300,7 @@ function MineWithPickaxe()
 
     -- Prompt user to select an intial mining target
     Player.UseObject(pickaxe.Serial)
-    Messages.Overhead("Select initial tile", Colors.Info, Player.Serial)
+    Messages.Overhead("Select initial tile...", Colors.Info, Player.Serial)
 
     local lastMiningTile = nil
     if Targeting.GetNewTarget(30000) then
@@ -276,47 +309,81 @@ function MineWithPickaxe()
         Pause(150)
     end
 
-    -- Check immediately if vein is already empty
+    -- Check immediately if intial tile has a end message in the journal
     if CheckJournalForEndMessage() then
-        Messages.Overhead("No ore found here, restarting.", Colors.Warning, Player.Serial)
-        Pause(500)
+        Messages.Overhead("No ore found, restarting...", Colors.Warning, Player.Serial)
+        Pause(300)
         return
     end
 
     CheckOreHuesInJournal() -- Check for ore hues in the journal
   
     -- Inner loop: continue mining last target until vein is depleted
-        while Config.firstRun == false do
-            Player.UseObject(pickaxe.Serial)        -- Activate pickaxe
+    while Config.firstRun == false do
+        Player.UseObject(pickaxe.Serial)        -- Activate pickaxe
 
-            -- Handle pickaxe break
-            if Journal.Contains("You have worn out your tool!") then
-                Messages.Overhead("Pickaxe broke! Equipping a new one...", Colors.Alert, Player.Serial)
-                pickaxe = EquipPickaxe()  -- Auto-equip a new pickaxe
-                if not pickaxe then
-                    Messages.Overhead("No pickaxe available! Stopping mining.", Colors.Alert, Player.Serial)
-                    Config.firstRun = true
-                    Journal.Clear()
-                break -- Exit inner loop
-                end
-            end
-
-            if Targeting.WaitForTarget(1000) then
-                Targeting.Target(miningTargetSerial)  -- Use the stored target serial
-                Pause(150)
-                Messages.Overhead("Auto mining vein!", Colors.Info, Player.Serial)
-            end
-
-            if CheckJournalForEndMessage() then     -- Check for depletion or invalid target
-                Messages.Overhead("Vein has been depleted. Select a new tile.", Colors.Warning, Player.Serial)
-                ReduceOre()
+        -- Handle pickaxe break
+        if Journal.Contains("You have worn out your tool!") then
+            Messages.Overhead("Pickaxe broke! Equipping a new one...", Colors.Alert, Player.Serial)
+             pickaxe = EquipPickaxe()  -- Auto-equip a new pickaxe
+            if not pickaxe then
+                 Messages.Overhead("No pickaxe available! Stopping mining.", Colors.Alert, Player.Serial)
+                Config.firstRun = true
                 Journal.Clear()
-                Pause(300)
-                break -- Exit inner loop
+            break -- Exit inner loop
             end
+        end
+
+        if Targeting.WaitForTarget(1000) then
+            Targeting.Target(lastMiningTile)  -- Use the stored target serial
+            Pause(150)
+            Messages.Overhead("Auto mining vein!", Colors.Info, Player.Serial)
+        end
+
+        if CheckJournalForEndMessage() then     -- Check for depletion or invalid target
+            Messages.Overhead("Vein has been depleted. Select a new tile...", Colors.Warning, Player.Serial)
+            ReduceOre()
+            Journal.Clear()
+            Pause(150)                
+  
+            -- Check player weight and drop ore if overweight
+            if Config.miningMode == "Solo" and Player.Weight > Player.MaxWeight then
+                local excessWeight = Player.Weight - Player.MaxWeight
+                local oreToDrop = math.ceil(excessWeight / 2)  -- Each ore weighs 2 stones
+
+                 Messages.Overhead("Overweight! Dropping " .. oreToDrop .. " ore(s).", Colors.Warning, Player.Serial)
+
+                local oreList = Items.FindByFilter({ type = 0x19B7, container = Player.Backpack })  -- Small ore pile ID
+                local droppedOreCount = 0
+        
+                for _, ore in ipairs(oreList) do
+                    if droppedOreCount >= oreToDrop then
+                        break
+                    end
+
+                    local dropCount = math.min(ore.Count, oreToDrop - droppedOreCount)  -- Drop only what's needed
+                     Player.PickUp(ore.Serial, dropCount)  -- Pick up the required number of ore pieces
+                    Pause(150)
+                    Player.DropOnGround()
+                    Pause(400)
+                    droppedOreCount = droppedOreCount + dropCount          
+                end
+
+                if droppedOreCount < oreToDrop then
+                    Messages.Overhead("Not enough ore to drop!", Colors.Alert, Player.Serial)
+                else
+                    Messages.Overhead("Dropped " .. droppedOreCount .. " ore(s).", Colors.Confirm, Player.Serial)
+                end
+             end
+
+             break -- Exit inner loop
+        end
     
-            CheckOreHuesInJournal() -- Check for ore hues in the journal
+        CheckOreHuesInJournal() -- Check for ore hues in the journal
        end   
+      
+       -- Attempt to pick up dropped ore if weight is below max
+       PickUpDroppedOre()
 end
 
 
@@ -329,4 +396,5 @@ while true do
     end
     Pause(250)
 end
+
 
